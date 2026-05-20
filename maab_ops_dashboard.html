@@ -16,7 +16,7 @@ body{font-family:var(--font);color:var(--text);font-size:14px}
 input,select,textarea,button{font-family:var(--font)}
 .app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
 .sb{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
-.main{padding:24px 28px 60px;overflow-y:auto}
+.main{padding:20px 28px 60px;overflow-y:auto}
 .sb-brand{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
 .sb-logo{font-size:14px;font-weight:500;display:flex;align-items:center;gap:7px}
 .sb-dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}
@@ -64,6 +64,35 @@ input,select,textarea,button{font-family:var(--font)}
 .modal-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--green);color:#fff;padding:9px 16px;border-radius:9px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;z-index:200;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
+.cmdbar{position:sticky;top:0;z-index:40;background:rgba(248,247,244,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);margin:-20px -28px 20px;padding:12px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cmd-search{flex:1;min-width:240px;position:relative}
+.cmd-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:15px}
+.cmd-search input{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--surface);padding:8px 12px 8px 34px;color:var(--text);font-size:13px;outline:none}
+.cmd-search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.cmd-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cmd-status{font-size:11px;color:var(--t3);white-space:nowrap}
+.search-results{display:grid;gap:8px}
+.search-hit{width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:10px 12px;cursor:pointer;color:var(--text)}
+.search-hit:hover{background:var(--s2)}
+.search-hit-top{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.search-hit-type{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);font-weight:500}
+.search-hit-title{font-size:13px;font-weight:500}
+.search-hit-meta{font-size:12px;color:var(--t2);line-height:1.4}
+.hidden-file{display:none}
+.meet-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:12px;align-items:start}
+.meet-composer{display:grid;gap:10px}
+.meet-feed{display:grid;gap:8px}
+.meet-card{border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface)}
+.meet-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.meet-card-title{font-size:13px;font-weight:500}
+.meet-card-meta{font-size:11px;color:var(--t3)}
+.meet-card-text{font-size:12px;color:var(--text);line-height:1.5;white-space:pre-wrap}
+.meet-sync{font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px;margin-top:7px}
+.meet-ai{border:1px solid var(--blue-lt);background:var(--blue-bg);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+.meet-ai-title{font-size:12px;font-weight:500;color:var(--blue);display:flex;align-items:center;gap:5px}
+.meet-ai-hint{font-size:11px;color:var(--t2);line-height:1.4}
+.meet-detect{font-size:11px;color:var(--t2);line-height:1.4}
+@media(max-width:900px){.meet-layout{grid-template-columns:1fr}.cmdbar{position:static}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 .am-section{margin-bottom:18px}
 .am-hdr{display:flex;align-items:center;gap:10px;padding:13px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl) var(--rl) 0 0;cursor:pointer;user-select:none;flex-wrap:wrap;gap:8px}
@@ -187,6 +216,7 @@ input,select,textarea,button{font-family:var(--font)}
     <button class="ni active" data-view="overview"><i class="ti ti-layout-dashboard"></i>Visão geral</button>
     <button class="ni" data-view="equipa"><i class="ti ti-users"></i>Equipa &amp; Projetos</button>
     <button class="ni" data-view="pipeline"><i class="ti ti-chart-bar"></i>Pipeline</button>
+    <button class="ni" data-view="reunioes"><i class="ti ti-video"></i>Controlo de reuniões</button>
     <div class="sb-sec">Operações</div>
     <button class="ni" data-view="calendario"><i class="ti ti-calendar"></i>Calendário</button>
     <button class="ni" data-view="alertas"><i class="ti ti-bell"></i>Alertas <span class="nb" id="sb-ac">0</span></button>
@@ -197,6 +227,19 @@ input,select,textarea,button{font-family:var(--font)}
   <div class="sb-foot"><div class="sb-saved"><i class="ti ti-cloud-check" style="font-size:13px"></i>Guardado automaticamente</div><div style="margin-top:3px" id="last-saved"></div></div>
 </aside>
 <main class="main">
+  <div class="cmdbar">
+    <div class="cmd-search">
+      <i class="ti ti-search"></i>
+      <input id="global-search" type="search" placeholder="Pesquisar projetos, clientes, AMs, alertas, tarefas..." autocomplete="off">
+    </div>
+    <div class="cmd-actions">
+      <button class="btn" onclick="openSearchResults()"><i class="ti ti-list-search"></i>Resultados</button>
+      <button class="btn" onclick="exportData()"><i class="ti ti-download"></i>Exportar</button>
+      <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
+      <input class="hidden-file" type="file" id="import-file" accept="application/json" onchange="importData(event)">
+    </div>
+    <div class="cmd-status" id="cmd-status"></div>
+  </div>
   <div class="view active" id="view-overview">
     <div class="topbar"><div><div class="ptitle">Visão geral</div><div class="psub" id="today-lbl"></div></div></div>
     <div class="metrics" id="gm"></div>
@@ -215,6 +258,39 @@ input,select,textarea,button{font-family:var(--font)}
     <div class="topbar"><div><div class="ptitle">Pipeline</div><div class="psub" id="pip-sub"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="btn" id="fil-am" onchange="renderPipeline()"><option value="">Todos os AMs</option></select><select class="btn" id="fil-est" onchange="renderPipeline()"><option value="">Todos os estados</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="inicio">Início</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div></div>
     <div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Projeto / Empresa</th><th>AM</th><th>Estado</th><th style="text-align:center">Reun.</th><th style="text-align:center">Cot.</th><th style="text-align:center">Contr.</th><th>Progresso</th><th>Prazo</th><th></th></tr></thead><tbody id="pip-body"></tbody></table></div>
+  </div>
+  <div class="view" id="view-reunioes">
+    <div class="topbar"><div><div class="ptitle">Controlo de reuniões</div><div class="psub">Cada AM regista a reunião e a informação sincroniza no projeto e na pasta do AM</div></div></div>
+    <div class="metrics" id="meet-metrics"></div>
+    <div class="meet-layout">
+      <div class="card meet-composer">
+        <div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px"><i class="ti ti-message-2" style="font-size:15px;color:var(--t3)"></i>Registo rápido da reunião</div>
+        <div class="meet-ai">
+          <div class="meet-ai-title"><i class="ti ti-sparkles" style="font-size:14px"></i>Leitura automática</div>
+          <div class="meet-ai-hint">Cole aqui o texto completo da reunião. O sistema tenta reconhecer o AM, projeto, data, estado e informação a guardar.</div>
+          <textarea class="form-ta" id="meet-raw" style="min-height:115px" placeholder="Ex: Ana Ferreira reuniu com Texteis SA em 20/05/2026. Projeto Expansão MENA. Reunião realizada. Foram definidos próximos passos..."></textarea>
+          <button class="btn" onclick="parseMeetingText()"><i class="ti ti-wand"></i>Ler texto e preencher</button>
+          <div class="meet-detect" id="meet-detect"></div>
+        </div>
+        <div class="form-row"><label class="form-lbl">Account Manager</label><select class="form-sel" id="meet-am" onchange="updateMeetingProjects()"></select></div>
+        <div class="form-row"><label class="form-lbl">Projeto</label><select class="form-sel" id="meet-project"></select></div>
+        <div class="form-grid">
+          <div class="form-row"><label class="form-lbl">Data</label><input class="form-in" id="meet-date" type="date"></div>
+          <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="meet-status"><option value="realizada">Realizada</option><option value="followup">Follow-up</option><option value="agendada">Agendada</option><option value="cancelada">Cancelada</option></select></div>
+        </div>
+        <div class="form-row"><label class="form-lbl">Informação da reunião</label><textarea class="form-ta" id="meet-note" style="min-height:150px" placeholder="Escreva decisões, pontos discutidos, próximos passos e bloqueios..."></textarea></div>
+        <button class="btn btn-p" onclick="saveMeetingNote()"><i class="ti ti-send"></i>Guardar e sincronizar</button>
+      </div>
+      <div>
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select class="btn" id="meet-fil-am" onchange="renderReunioes()"><option value="">Todos os AMs</option></select>
+            <select class="btn" id="meet-fil-status" onchange="renderReunioes()"><option value="">Todos os estados</option><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="followup">Follow-up</option><option value="cancelada">Cancelada</option></select>
+          </div>
+        </div>
+        <div class="meet-feed" id="meet-body"></div>
+      </div>
+    </div>
   </div>
   <div class="view" id="view-calendario">
     <div class="topbar"><div><div class="ptitle">Calendário semanal</div><div class="psub">Tarefas, reuniões e prazos cruzados com o pipeline</div></div></div>
@@ -269,6 +345,7 @@ const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set'];
 const SCOL={active:'#639922',risco:'#BA7517',concluido:'#1D9E75',pausa:'#888780',inicio:'#378ADD'};
 const SCLS={active:'p-ok',risco:'p-hot',concluido:'p-ok',pausa:'p-gray',inicio:'p-info'};
 const SLBL={active:'Em curso',risco:'Em risco',concluido:'Concluído',pausa:'Em pausa',inicio:'Início'};
+const MST={agendada:{l:'Agendada',c:'p-info'},realizada:{l:'Realizada',c:'p-ok'},followup:{l:'Follow-up',c:'p-warn'},cancelada:{l:'Cancelada',c:'p-gray'}};
 const CT={update:{l:'Atualização',c:'ct-update'},reuniao:{l:'Reunião',c:'ct-reuniao'},cotacao:{l:'Cotação',c:'ct-cotacao'},alerta:{l:'Alerta',c:'ct-alerta'},nota:{l:'Nota',c:'ct-nota'}};
 const AM_COL={urg:{cls:'al-urg',ic:'ti-alert-triangle',col:'#A32D2D'},warn:{cls:'al-warn',ic:'ti-clock',col:'#854F0B'},info:{cls:'al-info',ic:'ti-info-circle',col:'#185FA5'},ok:{cls:'al-ok',ic:'ti-check',col:'#2d7a3a'}};
 const CHARTS={};
@@ -295,20 +372,31 @@ projetos:[
 comments:{},
 alertas:[{id:1,tipo:'urg',title:'Doce Lar – certificação halal bloqueada',body:'Prazo Mai 2025. Escalar urgentemente com cliente.',done:false},{id:2,tipo:'urg',title:'TransLog – apenas 2 reuniões vs meta 6',body:'Diogo Costa precisa de suporte imediato.',done:false},{id:3,tipo:'warn',title:'Móveis Portugal – retoma em setembro',body:'Confirmar com Bruno Silva e cliente.',done:false},{id:4,tipo:'warn',title:'Missão EAU – janela Out/Nov 2025',body:'Iniciar planeamento com clientes elegíveis.',done:false},{id:5,tipo:'ok',title:'DeliciasLx – 4 contratos a fechar',body:'Ana Ferreira a caminho de concluir.',done:false},{id:6,tipo:'info',title:'Ferromax – documentar caso de sucesso',body:'5 contratos fechados. Preparar caso de estudo.',done:false}],
 tarefas:[{id:1,label:'Verificar estado certificação halal – Doce Lar',who:'Gestor · urgente',done:true},{id:2,label:'Reunião de suporte com Diogo Costa – TransLog',who:'Gestor · esta semana',done:false},{id:3,label:'Confirmar fecho contratos DeliciasLx',who:'Gestor + Ana F. · esta semana',done:false},{id:4,label:'Iniciar planeamento Missão EAU outubro 2025',who:'Gestor · este mês',done:false},{id:5,label:'Documentar caso de sucesso Ferromax',who:'Marketing · em curso',done:true},{id:6,label:'Check-in Móveis Portugal sobre retoma',who:'Bruno Silva · agosto',done:false}],
+reunioes:[{id:101,data:'2026-05-21',hora:'10:00',titulo:'Suporte TransLog',projetoId:11,amId:4,status:'agendada',proximo:'Rever lista de leads e definir reforço comercial'},{id:102,data:'2026-05-22',hora:'11:30',titulo:'Fecho DeliciasLx',projetoId:7,amId:3,status:'followup',proximo:'Confirmar contratos pendentes com compradores Dubai'},{id:103,data:'2026-05-24',hora:'15:00',titulo:'Planeamento Missão EAU',projetoId:1,amId:1,status:'agendada',proximo:'Selecionar clientes elegíveis e janela de viagem'},{id:104,data:'2026-05-17',hora:'09:30',titulo:'Caso de sucesso Ferromax',projetoId:3,amId:1,status:'realizada',proximo:'Enviar notas para marketing'}],
 notas:[{id:1,titulo:'Reunião semanal equipa',texto:'Próxima sexta 10h. Agenda: TransLog, fecho DeliciasLx, planeamento missão EAU.'},{id:2,titulo:'Estratégia Q3 2025',texto:'Foco em Arábia Saudita e Qatar para novos clientes. Setores: construção e saúde.'}]};
 
 let S=(()=>{try{const r=localStorage.getItem(STORE);if(r)return JSON.parse(r);}catch(e){}return JSON.parse(JSON.stringify(DEF));})();
+if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));
 S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];if(!p.mensal){p.mensal={r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0]};}});
 
-function save(){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}}
+function save(){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();}
 function getAM(id){return S.ams.find(a=>a.id===id)||{name:'—',init:'?',color:'#eee',tc:'#888'};}
 function getP(id){return S.projetos.find(p=>p.id===id);}
 function tsR(t){const d=Math.floor((Date.now()-t)/1000);if(d<60)return'agora';if(d<3600)return`há ${Math.floor(d/60)}min`;if(d<86400)return`há ${Math.floor(d/3600)}h`;return new Date(t).toLocaleDateString('pt-PT',{day:'numeric',month:'short'});}
 function avH(am,sz=30){return`<div class="av" style="width:${sz}px;height:${sz}px;background:${am.color};color:${am.tc};font-size:${Math.round(sz*.36)}px">${am.init}</div>`;}
+function h(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function updateCommandStatus(){const openAlerts=S.alertas.filter(a=>!a.done).length;const overdue=S.projetos.filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
+function buildSearchIndex(){const hits=[];S.projetos.forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});S.ams.forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${S.projetos.filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
+function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!terms.length)return[];return buildSearchIndex().filter(x=>terms.every(t=>x.text.toLowerCase().includes(t)||x.title.toLowerCase().includes(t)||x.meta.toLowerCase().includes(t))).slice(0,12);}
+function openSearchResults(){const input=document.getElementById('global-search');const q=input?input.value.trim():'';const hits=getSearchResults(q);const body=!q?'<div style="font-size:13px;color:var(--t3);padding:10px 0">Escreva uma pesquisa para procurar em projetos, clientes, equipa, alertas, tarefas e notas.</div>':hits.length?`<div class="search-results">${hits.map(x=>`<button class="search-hit" onclick="goSearchHit('${x.view}')"><div class="search-hit-top"><i class="ti ${x.icon}" style="font-size:14px;color:var(--t3)"></i><span class="search-hit-type">${h(x.type)}</span></div><div class="search-hit-title">${h(x.title)}</div><div class="search-hit-meta">${h(x.meta)}</div></button>`).join('')}</div>`:'<div style="font-size:13px;color:var(--t3);padding:10px 0">Sem resultados para esta pesquisa.</div>';openModal(`<div class="modal-head"><div class="modal-title">Resultados da pesquisa</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}`,null);}
+function goSearchHit(view){closeModal();const btn=document.querySelector(`[data-view="${view}"]`);if(btn)btn.click();}
+function exportData(){const payload={exportedAt:new Date().toISOString(),version:STORE,data:S,calendar:calEvents};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`maab-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
 
 let VIEW='overview';
 document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.view;document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
-function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
+document.getElementById('global-search').addEventListener('keydown',e=>{if(e.key==='Enter')openSearchResults();});
+function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='reunioes')renderReunioes();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
 
 document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 if(S.lastSaved){const el=document.getElementById('last-saved');const d=new Date(S.lastSaved);if(el)el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
@@ -319,6 +407,7 @@ function renderGM(){
   const rev=S.projetos.reduce((s,p)=>s+p.revenue,0);
   document.getElementById('gm').innerHTML=`<div class="mc"><div class="mc-l">Projetos totais</div><div class="mc-v">${total}</div><div class="mc-s">${S.ams.length} AMs</div></div><div class="mc"><div class="mc-l">Ativos</div><div class="mc-v">${ativos}</div></div><div class="mc"><div class="mc-l">Em risco</div><div class="mc-v" style="color:var(--amber)">${risco}</div></div><div class="mc"><div class="mc-l">Concluídos</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Revenue est.</div><div class="mc-v">€${Math.round(rev/1000)}k</div></div>`;
   document.getElementById('sb-ac').textContent=S.alertas.filter(a=>!a.done).length;
+  updateCommandStatus();
 }
 
 function renderOverview(){
@@ -344,6 +433,7 @@ function renderEquipa(){
     const hdr=document.createElement('div');hdr.className='am-hdr';
     hdr.innerHTML=`${avH(am,36)}<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${am.name}</div><div style="font-size:12px;color:var(--t3)">${am.role} · ${ps.length} projeto${ps.length!==1?'s':''}</div></div><div style="display:flex;gap:16px;margin-right:10px;flex-shrink:0"><div style="text-align:center"><div style="font-size:14px;font-weight:500">${reu}</div><div style="font-size:10px;color:var(--t3)">Reun.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500;color:var(--amber)">${cot}</div><div style="font-size:10px;color:var(--t3)">Cot.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500;color:var(--green)">${con}</div><div style="font-size:10px;color:var(--t3)">Contr.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500">€${Math.round(rev/1000)}k</div><div style="font-size:10px;color:var(--t3)">Rev.</div></div></div><div style="width:80px;margin-right:10px;flex-shrink:0"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}% avg</div></div><button class="btn btn-sm" onclick="openEditAM(${am.id});event.stopPropagation()"><i class="ti ti-edit"></i>Editar</button><i class="ti ti-chevron-down" style="font-size:14px;color:var(--t3);margin-left:6px;transition:transform .2s" id="ac-${am.id}"></i>`;
     const body=document.createElement('div');body.className='am-body';body.id=`ab-${am.id}`;
+    if(am.nota){const note=document.createElement('div');note.style.cssText='padding:12px 18px;border-bottom:1px solid var(--border);background:var(--s2)';note.innerHTML=`<div style="font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i class="ti ti-folder"></i>Pasta do Account Manager</div><div style="font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--text)">${h(am.nota)}</div>`;body.appendChild(note);}
     ps.forEach(p=>body.appendChild(buildProjBlock(p,am)));
     hdr.onclick=()=>{const open=body.style.display==='none';body.style.display=open?'block':'none';const chev=document.getElementById(`ac-${am.id}`);if(chev)chev.style.transform=open?'rotate(180deg)':'rotate(0deg)';};
     sec.appendChild(hdr);sec.appendChild(body);el.appendChild(sec);
@@ -446,6 +536,76 @@ function renderPipeline(){
   const tbody=document.getElementById('pip-body');tbody.innerHTML='';
   if(!ps.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--t3)">Nenhum projeto neste filtro.</td></tr>`;return;}
   ps.forEach(p=>{const am=getAM(p.amId);const tr=document.createElement('tr');tr.innerHTML=`<td><div style="font-weight:500">${p.nome}</div><div style="font-size:11px;color:var(--t3)">${p.cliente}</div></td><td><div style="display:flex;align-items:center;gap:6px">${avH(am,22)}<span style="font-size:12px">${am.name}</span></div></td><td><span class="pill ${SCLS[p.estado]}">${SLBL[p.estado]}</span></td><td style="text-align:center;font-weight:500">${p.mensal.r.reduce((a,b)=>a+b,0)}</td><td style="text-align:center;font-weight:500;color:var(--amber)">${p.mensal.c.reduce((a,b)=>a+b,0)}</td><td style="text-align:center;font-weight:500;color:var(--green)">${p.mensal.k.reduce((a,b)=>a+b,0)}</td><td style="min-width:100px"><div class="pbar"><div class="pbar-f" style="width:${p.pct}%;background:${SCOL[p.estado]}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">${p.pct}%</div></td><td style="font-size:12px;color:var(--t3)">${p.prazo}</td><td><button class="btn btn-sm" onclick="openEditProj(${p.id})"><i class="ti ti-edit"></i>Editar</button></td>`;tbody.appendChild(tr);});
+}
+
+function fmtMeetDate(r){const d=r.data?new Date(r.data+'T00:00:00'):new Date();return d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});}
+function updateMeetingProjects(){
+  const amId=parseInt(document.getElementById('meet-am').value);
+  const sel=document.getElementById('meet-project');if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='';
+  S.projetos.filter(p=>!amId||p.amId===amId).forEach(p=>sel.appendChild(new Option(`${p.nome} · ${p.cliente}`,p.id)));
+  if(prev&&[...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+function normText(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function parseDateFromText(text){
+  const raw=String(text||'');
+  const m=raw.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
+  if(m){const y=m[3]?parseInt(m[3].length===2?'20'+m[3]:m[3]):new Date().getFullYear();return `${y}-${String(parseInt(m[2])).padStart(2,'0')}-${String(parseInt(m[1])).padStart(2,'0')}`;}
+  const n=normText(raw),now=new Date();
+  if(n.includes('hoje'))return now.toISOString().slice(0,10);
+  if(n.includes('ontem')){const d=new Date(now);d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+  return '';
+}
+function parseMeetingText(){
+  const raw=(document.getElementById('meet-raw').value||'').trim();if(!raw)return alert('Cole primeiro o texto da reunião.');
+  const n=normText(raw);
+  const am=S.ams.find(a=>n.includes(normText(a.name))||n.includes(normText(a.init)));
+  if(am){document.getElementById('meet-am').value=am.id;updateMeetingProjects();}
+  const scope=am?S.projetos.filter(p=>p.amId===am.id):S.projetos;
+  const proj=scope.find(p=>n.includes(normText(p.nome))||n.includes(normText(p.cliente)))||S.projetos.find(p=>n.includes(normText(p.nome))||n.includes(normText(p.cliente)));
+  if(proj){if(!am){document.getElementById('meet-am').value=proj.amId;updateMeetingProjects();}document.getElementById('meet-project').value=proj.id;}
+  const date=parseDateFromText(raw);if(date)document.getElementById('meet-date').value=date;
+  let status='realizada';
+  if(n.includes('cancelad'))status='cancelada';else if(n.includes('follow')||n.includes('seguimento')||n.includes('proximo passo'))status='followup';else if(n.includes('agendad')||n.includes('marcad'))status='agendada';
+  document.getElementById('meet-status').value=status;
+  document.getElementById('meet-note').value=raw;
+  const detected=[am?`AM: ${am.name}`:'AM: por confirmar',proj?`Projeto: ${proj.nome}`:'Projeto: por confirmar',date?`Data: ${date}`:'Data: hoje/por confirmar',`Estado: ${MST[status].l}`];
+  document.getElementById('meet-detect').textContent=detected.join(' · ');
+}
+function renderReunioes(){
+  const amSelect=document.getElementById('meet-am'),filterAm=document.getElementById('meet-fil-am'),filterStatus=document.getElementById('meet-fil-status');
+  const prevAm=amSelect.value,prevFilter=filterAm.value,prevStatus=filterStatus.value;
+  amSelect.innerHTML='';filterAm.innerHTML='<option value="">Todos os AMs</option>';
+  S.ams.forEach(am=>{amSelect.appendChild(new Option(am.name,am.id));filterAm.appendChild(new Option(am.name,am.id));});
+  if(prevAm)amSelect.value=prevAm;if(prevFilter)filterAm.value=prevFilter;if(prevStatus)filterStatus.value=prevStatus;
+  if(!document.getElementById('meet-date').value)document.getElementById('meet-date').value=new Date().toISOString().slice(0,10);
+  updateMeetingProjects();
+  const meetings=(S.reunioes||[]).filter(r=>(!filterAm.value||String(r.amId)===filterAm.value)&&(!filterStatus.value||r.status===filterStatus.value)).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora));
+  const total=S.reunioes.length,done=S.reunioes.filter(r=>r.status==='realizada').length,follow=S.reunioes.filter(r=>r.status==='followup').length,planned=S.reunioes.filter(r=>r.status==='agendada').length;
+  document.getElementById('meet-metrics').innerHTML=`<div class="mc"><div class="mc-l">Registos</div><div class="mc-v">${total}</div></div><div class="mc"><div class="mc-l">Realizadas</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Follow-up</div><div class="mc-v" style="color:var(--amber)">${follow}</div></div><div class="mc"><div class="mc-l">Agendadas</div><div class="mc-v" style="color:var(--blue)">${planned}</div></div>`;
+  const feed=document.getElementById('meet-body');feed.innerHTML='';
+  if(!meetings.length){feed.innerHTML='<div class="card" style="text-align:center;color:var(--t3);font-size:13px">Sem registos de reunião neste filtro.</div>';return;}
+  meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto e na pasta do AM</div></div>`;feed.appendChild(c);});
+}
+function saveMeetingNote(){
+  const amId=parseInt(document.getElementById('meet-am').value),projectId=parseInt(document.getElementById('meet-project').value);
+  const am=getAM(amId),p=getP(projectId),note=(document.getElementById('meet-note').value||'').trim();
+  if(!amId||!p||!note)return alert('Escolha o AM, o projeto e escreva a informação da reunião.');
+  const date=document.getElementById('meet-date').value||new Date().toISOString().slice(0,10),status=document.getElementById('meet-status').value;
+  const stamp=new Date(date+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});
+  const title=`Reunião · ${p.cliente}`;
+  const full=`${stamp} · ${p.nome}\n${note}`;
+  const rec={id:S.nextId++,data:date,hora:'',titulo:title,projetoId:projectId,amId,status,nota:note,proximo:note};
+  S.reunioes.unshift(rec);
+  if(!S.comments[projectId])S.comments[projectId]=[];
+  S.comments[projectId].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid:projectId,author:am.name,authorInit:am.init,authorColor:am.color,authorTc:am.tc,type:'reuniao',text:note,pinned:false,ts:Date.now(),deleted:false});
+  p.nota=[full,p.nota].filter(Boolean).join('\n\n');
+  am.nota=[full,am.nota].filter(Boolean).join('\n\n');
+  const mIdx=new Date(date+'T00:00:00').getMonth();if(mIdx>=0&&mIdx<p.mensal.r.length)p.mensal.r[mIdx]=(p.mensal.r[mIdx]||0)+1;
+  document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-detect').textContent='';
+  if(CHARTS['ch-'+p.id]){CHARTS['ch-'+p.id].destroy();delete CHARTS['ch-'+p.id];}
+  save();renderReunioes();
 }
 
 function renderAlertas(){
