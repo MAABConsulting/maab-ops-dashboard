@@ -51,7 +51,9 @@ Basta fazer download do ficheiro `maab_ops_dashboard.html` e abri-lo diretamente
 
 ### Opção 2 — GitHub Pages
 1. Ativa **GitHub Pages** no repositório (`Settings → Pages → Deploy from branch: main`)
-2. Acede ao dashboard em `https://<utilizador>.github.io/<repositório>/maab_ops_dashboard.html`
+2. Acede ao preview em `https://maabconsulting.github.io/maab-ops-dashboard/`
+
+O ficheiro `index.html` encaminha automaticamente para `maab_ops_dashboard.html`, por isso a equipa pode usar o link curto do GitHub Pages para acompanhar a versão mais recente.
 
 ---
 
