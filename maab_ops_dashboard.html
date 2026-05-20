@@ -187,7 +187,6 @@ input,select,textarea,button{font-family:var(--font)}
     <button class="ni active" data-view="overview"><i class="ti ti-layout-dashboard"></i>Visão geral</button>
     <button class="ni" data-view="equipa"><i class="ti ti-users"></i>Equipa &amp; Projetos</button>
     <button class="ni" data-view="pipeline"><i class="ti ti-chart-bar"></i>Pipeline</button>
-    <button class="ni" data-view="controle-reunioes"><i class="ti ti-calendar-stats"></i>Controle de reuniões</button>
     <div class="sb-sec">Operações</div>
     <button class="ni" data-view="calendario"><i class="ti ti-calendar"></i>Calendário</button>
     <button class="ni" data-view="alertas"><i class="ti ti-bell"></i>Alertas <span class="nb" id="sb-ac">0</span></button>
@@ -216,9 +215,6 @@ input,select,textarea,button{font-family:var(--font)}
     <div class="topbar"><div><div class="ptitle">Pipeline</div><div class="psub" id="pip-sub"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="btn" id="fil-am" onchange="renderPipeline()"><option value="">Todos os AMs</option></select><select class="btn" id="fil-est" onchange="renderPipeline()"><option value="">Todos os estados</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="inicio">Início</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div></div>
     <div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Projeto / Empresa</th><th>AM</th><th>Estado</th><th style="text-align:center">Reun.</th><th style="text-align:center">Cot.</th><th style="text-align:center">Contr.</th><th>Progresso</th><th>Prazo</th><th></th></tr></thead><tbody id="pip-body"></tbody></table></div>
-  </div>
-  <div class="view" id="view-controle-reunioes">
-    <div class="topbar"><div><div class="ptitle">Controle de reuniões</div></div></div>
   </div>
   <div class="view" id="view-calendario">
     <div class="topbar"><div><div class="ptitle">Calendário semanal</div><div class="psub">Tarefas, reuniões e prazos cruzados com o pipeline</div></div></div>
