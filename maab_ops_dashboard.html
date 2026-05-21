@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -101,6 +100,17 @@ input,select,textarea,button{font-family:var(--font)}
 .client-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
 .client-stat{font-size:11px;color:var(--t2)}
 .client-stat b{font-size:13px;color:var(--text);font-weight:500}
+.done-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.done-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px}
+.done-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.done-title{font-size:14px;font-weight:500;line-height:1.25}
+.done-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.done-feedback{font-size:12px;color:var(--text);line-height:1.5;background:var(--s2);border-radius:9px;padding:9px 10px;min-height:52px;white-space:pre-wrap;margin-top:10px}
+.done-strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.done-mini{font-size:11px;color:var(--t2)}
+.done-mini b{font-size:13px;color:var(--text);font-weight:500}
+.mini-chart{height:42px;display:flex;align-items:end;gap:3px;margin-top:10px;border-bottom:1px solid var(--border)}
+.mini-bar{flex:1;min-width:4px;background:var(--blue-lt);border-radius:3px 3px 0 0}
 @media(max-width:900px){.meet-layout{grid-template-columns:1fr}.cmdbar{position:static}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 .am-section{margin-bottom:18px}
@@ -225,6 +235,7 @@ input,select,textarea,button{font-family:var(--font)}
     <button class="ni active" data-view="overview"><i class="ti ti-layout-dashboard"></i>Visão geral</button>
     <button class="ni" data-view="equipa"><i class="ti ti-users"></i>Equipa &amp; Projetos</button>
     <button class="ni" data-view="pipeline"><i class="ti ti-chart-bar"></i>Clientes atuais</button>
+    <button class="ni" data-view="concluidos"><i class="ti ti-archive"></i>Clientes concluídos</button>
     <button class="ni" data-view="reunioes"><i class="ti ti-video"></i>Controlo de reuniões</button>
     <div class="sb-sec">Operações</div>
     <button class="ni" data-view="calendario"><i class="ti ti-calendar"></i>Calendário</button>
@@ -265,8 +276,13 @@ input,select,textarea,button{font-family:var(--font)}
   </div>
   <div class="view" id="view-pipeline">
     <div class="topbar"><div><div class="ptitle">Clientes atuais</div><div class="psub" id="pip-sub"></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p" onclick="openAddClient()"><i class="ti ti-user-plus"></i>Novo cliente</button><select class="btn" id="fil-am" onchange="renderPipeline()"><option value="">Todos os AMs</option></select><select class="btn" id="fil-est" onchange="renderPipeline()"><option value="">Todos os estados</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="inicio">Início</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p" onclick="openAddClient()"><i class="ti ti-user-plus"></i>Novo cliente</button><select class="btn" id="fil-am" onchange="renderPipeline()"><option value="">Todos os AMs</option></select><select class="btn" id="fil-est" onchange="renderPipeline()"><option value="">Todos os estados</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="inicio">Início</option><option value="pausa">Em pausa</option></select></div></div>
     <div class="card" style="padding:14px 16px"><div style="font-size:13px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-building-store" style="font-size:14px;color:var(--t3)"></i>Clientes atuais</div><div class="client-grid" id="client-grid"></div></div>
+  </div>
+  <div class="view" id="view-concluidos">
+    <div class="topbar"><div><div class="ptitle">Clientes concluídos</div><div class="psub" id="done-sub"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="btn" id="done-am" onchange="renderConcluidos()"><option value="">Todos os AMs</option></select></div></div>
+    <div id="done-grid"></div>
   </div>
   <div class="view" id="view-reunioes">
     <div class="topbar"><div><div class="ptitle">Controlo de reuniões</div><div class="psub">Cada AM regista a reunião e a informação sincroniza no projeto e na pasta do AM</div></div></div>
@@ -352,6 +368,8 @@ input,select,textarea,button{font-family:var(--font)}
 <script>
 const STORE='maab_v3';
 const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set'];
+const M12=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MNUM={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
 const SCOL={active:'#639922',risco:'#BA7517',concluido:'#1D9E75',pausa:'#888780',inicio:'#378ADD'};
 const SCLS={active:'p-ok',risco:'p-hot',concluido:'p-ok',pausa:'p-gray',inicio:'p-info'};
 const SLBL={active:'Em curso',risco:'Em risco',concluido:'Concluído',pausa:'Em pausa',inicio:'Início'};
@@ -387,7 +405,7 @@ notas:[{id:1,titulo:'Reunião semanal equipa',texto:'Próxima sexta 10h. Agenda:
 
 let S=(()=>{try{const r=localStorage.getItem(STORE);if(r)return JSON.parse(r);}catch(e){}return JSON.parse(JSON.stringify(DEF));})();
 if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));
-S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];if(!p.mensal){p.mensal={r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0]};}if(!p.mensal.s)p.mensal.s=[0,0,0,0,0,0,0,0,0];if(!p.mensal.sc)p.mensal.sc=[0,0,0,0,0,0,0,0,0];});
+S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});
 
 function save(){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();}
 function getAM(id){return S.ams.find(a=>a.id===id)||{name:'—',init:'?',color:'#eee',tc:'#888'};}
@@ -395,19 +413,34 @@ function getP(id){return S.projetos.find(p=>p.id===id);}
 function tsR(t){const d=Math.floor((Date.now()-t)/1000);if(d<60)return'agora';if(d<3600)return`há ${Math.floor(d/60)}min`;if(d<86400)return`há ${Math.floor(d/3600)}h`;return new Date(t).toLocaleDateString('pt-PT',{day:'numeric',month:'short'});}
 function avH(am,sz=30){return`<div class="av" style="width:${sz}px;height:${sz}px;background:${am.color};color:${am.tc};font-size:${Math.round(sz*.36)}px">${am.init}</div>`;}
 function h(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function parseMY(v,fallbackYear){const s=String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const m=s.match(/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\b(?:\s*(\d{4}))?/);if(!m)return null;return{m:MNUM[m[1]],y:m[2]?parseInt(m[2]):fallbackYear};}
+function fmtMY(d,long=false){const y=String(d.getFullYear()).slice(2);return long?`${M12[d.getMonth()]} ${d.getFullYear()}`:`${M12[d.getMonth()]} ${y}`;}
+function monthInputToMY(v){if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})$/);return m?{y:parseInt(m[1]),m:parseInt(m[2])-1}:null;}
+function myToMonthInput(my){return my?`${my.y}-${String(my.m+1).padStart(2,'0')}`:'';}
+function inferStartMY(p){const end=parseMY(p.prazo,new Date().getFullYear())||{m:8,y:new Date().getFullYear()};if(p.inicio){const byInput=monthInputToMY(p.inicio);if(byInput)return byInput;const byText=parseMY(p.inicio,end.y);if(byText)return byText;}const first=(p.fases||[]).map(f=>parseMY(f.data,end.y)).find(Boolean);if(first)return first;return{m:0,y:end.y};}
+function projectLabels(p){const maxLen=Math.max(1,p.mensal?.r?.length||0,p.mensal?.c?.length||0,p.mensal?.k?.length||0,p.mensal?.s?.length||0,p.mensal?.labels?.length||0);if(Array.isArray(p.mensal?.labels)&&p.mensal.labels.length>=maxLen)return p.mensal.labels.slice(0,maxLen);const st=inferStartMY(p);const d=new Date(st.y,st.m,1);const arr=[];for(let i=0;i<maxLen;i++){arr.push(fmtMY(d,maxLen<=6));d.setMonth(d.getMonth()+1);}return arr;}
+function ensureMetricShape(p){if(!p.mensal)p.mensal={};const len=Math.max(9,p.mensal.r?.length||0,p.mensal.c?.length||0,p.mensal.k?.length||0,p.mensal.s?.length||0,p.mensal.labels?.length||0);['r','c','k','s','sc'].forEach(k=>{if(!Array.isArray(p.mensal[k]))p.mensal[k]=[];while(p.mensal[k].length<len)p.mensal[k].push(0);});if(!Array.isArray(p.mensal.labels)||p.mensal.labels.length!==len)p.mensal.labels=projectLabels(p);}
+function periodInputs(p,key,prefix,opts=''){const labels=projectLabels(p);return`<div style="display:grid;grid-template-columns:repeat(${labels.length},minmax(54px,1fr));gap:5px;margin-bottom:12px;overflow-x:auto">${labels.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px;white-space:nowrap">${m}</div><input class="form-in" id="${prefix}-${i}" type="number" ${opts} value="${p.mensal[key][i]||''}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>`;}
+function scoreAvg(p){const vals=(p.mensal?.s||[]).filter(Boolean);return vals.length?Number((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)):0;}
+function projectMonthIndex(p,dateStr){const dt=new Date(dateStr+'T00:00:00');if(isNaN(dt))return-1;const st=inferStartMY(p);return(dt.getFullYear()-st.y)*12+(dt.getMonth()-st.m);}
+function projectMarkets(p){if(Array.isArray(p.mercados)&&p.mercados.length)return p.mercados.filter(Boolean);const txt=[p.nome,p.cliente,p.nota,...(p.fases||[]).flatMap(f=>[f.label,f.note])].join(' ');const defs=[['EAU',/\bEAU\b|emirados/i],['Arábia Saudita',/arabia saudita|saudi/i],['Qatar',/qatar/i],['Kuwait',/kuwait/i],['Omã',/\boma\b|omã/i],['Bahrain',/bahrain/i],['Egipto',/egipto|egypt/i],['MENA',/\bmena\b/i],['GCC',/\bgcc\b/i]];const out=[];defs.forEach(([label,re])=>{if(re.test(txt)&&!out.includes(label))out.push(label);});return out;}
+function splitMarkets(v){return String(v||'').split(/[,;|]/).map(x=>x.trim()).filter(Boolean);}
+function phaseMonthIndexes(p,f){const labels=projectLabels(p);const raw=String(f.data||'');const parts=raw.split(/[–-]/).map(x=>parseMY(x, inferStartMY(p).y)).filter(Boolean);let start=parts[0],end=parts[1]||parts[0];if(!start){const i=(p.fases||[]).indexOf(f);return[i>=0&&i<labels.length?i:0];}let a=(start.y-inferStartMY(p).y)*12+(start.m-inferStartMY(p).m),b=(end.y-inferStartMY(p).y)*12+(end.m-inferStartMY(p).m);if(b<a)b=a;const idx=[];for(let i=Math.max(0,a);i<=Math.min(labels.length-1,b);i++)idx.push(i);return idx.length?idx:[Math.max(0,Math.min(labels.length-1,a))];}
+function phaseKPIs(p,f){const idx=phaseMonthIndexes(p,f);const labels=projectLabels(p);const r=idx.reduce((s,i)=>s+(p.mensal.r[i]||0),0);const c=idx.reduce((s,i)=>s+(p.mensal.c[i]||0),0);const scores=idx.map(i=>p.mensal.s[i]||0).filter(Boolean);const score=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'';const period=idx.map(i=>labels[i]).join(', ');return{r,c,score,period};}
+function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0}));let active=rows.filter(x=>x.r||x.c||x.score);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span></div>`).join('');}
 function updateCommandStatus(){const openAlerts=S.alertas.filter(a=>!a.done).length;const overdue=S.projetos.filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
 function buildSearchIndex(){const hits=[];S.projetos.forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});S.ams.forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${S.projetos.filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
 function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!terms.length)return[];return buildSearchIndex().filter(x=>terms.every(t=>x.text.toLowerCase().includes(t)||x.title.toLowerCase().includes(t)||x.meta.toLowerCase().includes(t))).slice(0,12);}
 function openSearchResults(){const input=document.getElementById('global-search');const q=input?input.value.trim():'';const hits=getSearchResults(q);const body=!q?'<div style="font-size:13px;color:var(--t3);padding:10px 0">Escreva uma pesquisa para procurar em projetos, clientes, equipa, alertas, tarefas e notas.</div>':hits.length?`<div class="search-results">${hits.map(x=>`<button class="search-hit" onclick="goSearchHit('${x.view}')"><div class="search-hit-top"><i class="ti ${x.icon}" style="font-size:14px;color:var(--t3)"></i><span class="search-hit-type">${h(x.type)}</span></div><div class="search-hit-title">${h(x.title)}</div><div class="search-hit-meta">${h(x.meta)}</div></button>`).join('')}</div>`:'<div style="font-size:13px;color:var(--t3);padding:10px 0">Sem resultados para esta pesquisa.</div>';openModal(`<div class="modal-head"><div class="modal-title">Resultados da pesquisa</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}`,null);}
 function goSearchHit(view){closeModal();const btn=document.querySelector(`[data-view="${view}"]`);if(btn)btn.click();}
 function exportData(){const payload={exportedAt:new Date().toISOString(),version:STORE,data:S,calendar:calEvents};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`maab-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
-function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];if(!p.mensal)p.mensal={r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0]};if(!p.mensal.s)p.mensal.s=[0,0,0,0,0,0,0,0,0];if(!p.mensal.sc)p.mensal.sc=[0,0,0,0,0,0,0,0,0];});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
+function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
 
 let VIEW='overview';
 document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.view;document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
 document.getElementById('global-search').addEventListener('keydown',e=>{if(e.key==='Enter')openSearchResults();});
-function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='reunioes')renderReunioes();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
- 
+function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='concluidos')renderConcluidos();else if(v==='reunioes')renderReunioes();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
+
 document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 if(S.lastSaved){const el=document.getElementById('last-saved');const d=new Date(S.lastSaved);if(el)el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
 
@@ -436,12 +469,11 @@ function renderEquipa(){
     const ps=S.projetos.filter(p=>p.amId===am.id);
     const reu=ps.reduce((s,p)=>s+p.mensal.r.reduce((a,b)=>a+b,0),0);
     const cot=ps.reduce((s,p)=>s+p.mensal.c.reduce((a,b)=>a+b,0),0);
-    const con=ps.reduce((s,p)=>s+p.mensal.k.reduce((a,b)=>a+b,0),0);
     const rev=ps.reduce((s,p)=>s+p.revenue,0);
     const med=ps.length?Math.round(ps.reduce((s,p)=>s+p.pct,0)/ps.length):0;
     const sec=document.createElement('div');sec.className='am-section';
     const hdr=document.createElement('div');hdr.className='am-hdr';
-    hdr.innerHTML=`${avH(am,36)}<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${am.name}</div><div style="font-size:12px;color:var(--t3)">${am.role} · ${ps.length} projeto${ps.length!==1?'s':''}</div></div><div style="display:flex;gap:16px;margin-right:10px;flex-shrink:0"><div style="text-align:center"><div style="font-size:14px;font-weight:500">${reu}</div><div style="font-size:10px;color:var(--t3)">Reun.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500;color:var(--amber)">${cot}</div><div style="font-size:10px;color:var(--t3)">Cot.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500;color:var(--green)">${con}</div><div style="font-size:10px;color:var(--t3)">Contr.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500">€${Math.round(rev/1000)}k</div><div style="font-size:10px;color:var(--t3)">Rev.</div></div></div><div style="width:80px;margin-right:10px;flex-shrink:0"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}% avg</div></div><button class="btn btn-sm" onclick="openEditAM(${am.id});event.stopPropagation()"><i class="ti ti-edit"></i>Editar</button><i class="ti ti-chevron-down" style="font-size:14px;color:var(--t3);margin-left:6px;transition:transform .2s" id="ac-${am.id}"></i>`;
+    hdr.innerHTML=`${avH(am,36)}<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${am.name}</div><div style="font-size:12px;color:var(--t3)">${am.role} · ${ps.length} projeto${ps.length!==1?'s':''}</div></div><div style="display:flex;gap:16px;margin-right:10px;flex-shrink:0"><div style="text-align:center"><div style="font-size:14px;font-weight:500">${reu}</div><div style="font-size:10px;color:var(--t3)">Reun.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500;color:var(--amber)">${cot}</div><div style="font-size:10px;color:var(--t3)">Cot.</div></div><div style="text-align:center"><div style="font-size:14px;font-weight:500">€${Math.round(rev/1000)}k</div><div style="font-size:10px;color:var(--t3)">Rev.</div></div></div><div style="width:80px;margin-right:10px;flex-shrink:0"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}% avg</div></div><button class="btn btn-sm" onclick="openEditAM(${am.id});event.stopPropagation()"><i class="ti ti-edit"></i>Editar</button><i class="ti ti-chevron-down" style="font-size:14px;color:var(--t3);margin-left:6px;transition:transform .2s" id="ac-${am.id}"></i>`;
     const body=document.createElement('div');body.className='am-body';body.id=`ab-${am.id}`;
     if(am.nota){const note=document.createElement('div');note.style.cssText='padding:12px 18px;border-bottom:1px solid var(--border);background:var(--s2)';note.innerHTML=`<div style="font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i class="ti ti-folder"></i>Pasta do Account Manager</div><div style="font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--text)">${h(am.nota)}</div>`;body.appendChild(note);}
     ps.forEach(p=>body.appendChild(buildProjBlock(p,am)));
@@ -451,10 +483,12 @@ function renderEquipa(){
 }
 
 function buildProjBlock(p,am){
+  ensureMetricShape(p);
   const block=document.createElement('div');block.className='proj-block';
+  const labels=projectLabels(p);
+  const markets=projectMarkets(p);
   const totalR=p.mensal.r.reduce((a,b)=>a+b,0);
   const totalC=p.mensal.c.reduce((a,b)=>a+b,0);
-  const totalK=p.mensal.k.reduce((a,b)=>a+b,0);
   const doneF=p.fases.filter(f=>f.done).length;
   const comms=(S.comments[p.id]||[]).filter(c=>!c.deleted);
   const pinned=comms.filter(c=>c.pinned);
@@ -467,11 +501,10 @@ function buildProjBlock(p,am){
     <div class="kpi-strip">
       <div class="kpi-chip"><div class="kpi-v">${totalR}</div><div class="kpi-l">Reuniões</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:var(--amber)">${totalC}</div><div class="kpi-l">Pedidos de cotação</div></div>
-      <div class="kpi-chip"><div class="kpi-v" style="color:var(--green)">${totalK}</div><div class="kpi-l">Contratos</div></div>
       <div class="kpi-chip"><div class="kpi-v">${doneF}/${p.fases.length}</div><div class="kpi-l">Fases concluídas</div></div>
       <div class="kpi-chip"><div class="kpi-v">€${(p.revenue/1000).toFixed(1)}k</div><div class="kpi-l">Orçamento est.</div></div>
       <div class="kpi-chip"><div class="kpi-v">${comms.length}</div><div class="kpi-l">Comentários</div></div>
-      <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${p.mensal.s.some(Boolean)?(p.mensal.s.reduce((a,b)=>a+b,0)/p.mensal.s.filter(Boolean).length).toFixed(1):'—'}</div><div class="kpi-l">Score médio</div></div>
+      <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${scoreAvg(p)||'—'}</div><div class="kpi-l">Score médio</div></div>
     </div>
     <div class="tab-row">
       <button class="tab-btn active" data-tab="chart" data-pid="${p.id}"><i class="ti ti-chart-line" style="font-size:13px"></i>Evolução mensal</button>
@@ -482,13 +515,14 @@ function buildProjBlock(p,am){
       <div class="chart-legend">
         <span class="leg-item"><span style="display:inline-block;width:18px;height:2.5px;background:#378ADD;border-radius:1px"></span>Reuniões</span>
         <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px dashed #BA7517"></span>Pedidos de cotação</span>
-        <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px dotted #1D9E75"></span>Contratos</span>
         <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px solid #6B55C8"></span>Score médio</span>
       </div>
-      <div style="position:relative;width:100%;height:200px"><canvas id="ch-${p.id}" role="img" aria-label="Gráfico mensal ${p.nome}">Reuniões: ${p.mensal.r.join(', ')}. Cotações: ${p.mensal.c.join(', ')}. Contratos: ${p.mensal.k.join(', ')}. Score médio: ${p.mensal.s.join(', ')}.</canvas></div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:7px">${labels[0]} → ${labels[labels.length-1]}</div>
+      <div style="position:relative;width:100%;height:200px"><canvas id="ch-${p.id}" role="img" aria-label="Gráfico mensal ${p.nome}">Períodos: ${labels.join(', ')}. Reuniões: ${p.mensal.r.join(', ')}. Cotações: ${p.mensal.c.join(', ')}. Score médio: ${p.mensal.s.join(', ')}.</canvas></div>
     </div>
     <div id="tf-${p.id}" class="phases-area" style="display:none">
-      ${p.fases.map((f,i)=>{const isL=i===p.fases.length-1;const dc=f.done?SCOL[p.estado]:'var(--b2)';const lc=f.done?SCOL[p.estado]+'44':'var(--border)';const kp=[];if(f.r>0)kp.push(`<span class="ph-kpi"><b>${f.r}</b> reun.</span>`);if(f.c>0)kp.push(`<span class="ph-kpi"><b>${f.c}</b> cotações</span>`);if(f.k>0)kp.push(`<span class="ph-kpi"><b>${f.k}</b> contratos</span>`);return`<div class="ph-item"><div class="ph-left"><div class="ph-dot" style="background:${dc};border:${f.done?'none':'1.5px solid var(--b2)'}"></div>${!isL?`<div class="ph-line" style="background:${lc}"></div>`:''}</div><div class="ph-right"><div class="ph-date">${f.data}</div><div class="ph-name" style="color:${f.done?'var(--text)':'var(--t3)'}">${f.label}${f.done?` <i class="ti ti-check" style="font-size:12px;color:var(--green)"></i>`:''}</div><div class="ph-note">${f.note}</div>${kp.length?`<div class="ph-kpis">${kp.join('')}</div>`:''}</div></div>`;}).join('')}
+      <div style="margin-bottom:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:6px">Países / mercados alvo</div><div class="ph-kpis">${markets.length?markets.map(m=>`<span class="ph-kpi"><i class="ti ti-map-pin" style="font-size:11px"></i> ${h(m)}</span>`).join(''):'<span class="ph-kpi">Sem mercados definidos</span>'}</div></div>
+      ${p.fases.map((f,i)=>{const isL=i===p.fases.length-1;const dc=f.done?SCOL[p.estado]:'var(--b2)';const lc=f.done?SCOL[p.estado]+'44':'var(--border)';return`<div class="ph-item"><div class="ph-left"><div class="ph-dot" style="background:${dc};border:${f.done?'none':'1.5px solid var(--b2)'}"></div>${!isL?`<div class="ph-line" style="background:${lc}"></div>`:''}</div><div class="ph-right"><div class="ph-date">${f.data}</div><div class="ph-name" style="color:${f.done?'var(--text)':'var(--t3)'}">${f.label}${f.done?` <i class="ti ti-check" style="font-size:12px;color:var(--green)"></i>`:''}</div><div class="ph-note">${f.note}</div>${phaseMonthRows(p,f)}</div></div>`;}).join('')}
     </div>
     <div id="tm-${p.id}" style="display:none">
       ${pinned.length>0?`<div style="background:var(--blue-bg);border-bottom:1px solid var(--blue-lt);padding:10px 18px"><div style="font-size:11px;color:var(--blue);font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-pin" style="font-size:11px"></i>Fixados</div>${pinned.map(c=>`<div style="font-size:12px;color:var(--blue);padding:3px 0">${c.author}: ${c.text.length>100?c.text.substring(0,100)+'…':c.text}</div>`).join('')}</div>`:''}
@@ -534,7 +568,7 @@ function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div clas
 
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
 
-function initChartScore2(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,yAxisID:'y',borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
+function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:projectLabels(p),datasets:[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
 function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);if(!ta||!sel)return;const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:'Gestor',authorInit:'GM',authorColor:'#E6F1FB',authorTc:'#185FA5',type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
 function togglePin(cid,pid){const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.pinned=!c.pinned;save();renderEquipa();}}
 function delComm(cid,pid){if(!confirm('Apagar comentário?'))return;const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.deleted=true;save();renderEquipa();}}
@@ -544,9 +578,9 @@ function renderPipeline(){
   const amSel=document.getElementById('fil-am');while(amSel.options.length>1)amSel.remove(1);
   S.ams.forEach(am=>{const o=new Option(am.name,am.id);amSel.appendChild(o);});
   if(amF){for(let i=0;i<amSel.options.length;i++)if(amSel.options[i].value==amF){amSel.selectedIndex=i;break;}}
-  const ps=S.projetos.filter(p=>(!amF||p.amId==amF)&&(!estF||p.estado===estF));
+  const ps=S.projetos.filter(p=>p.estado!=='concluido'&&(!amF||p.amId==amF)&&(!estF||p.estado===estF));
   const totalClientes=new Set(ps.map(p=>p.cliente||'Sem cliente')).size;
-  document.getElementById('pip-sub').textContent=`${totalClientes} cliente${totalClientes!==1?'s':''} atual${totalClientes!==1?'is':''}`;
+  document.getElementById('pip-sub').textContent=`${totalClientes} cliente${totalClientes!==1?'s':''} ${totalClientes!==1?'atuais':'atual'}`;
   renderClientGrid(ps);
 }
 function renderClientGrid(projects){
@@ -556,6 +590,23 @@ function renderClientGrid(projects){
   const clients=Object.values(map).sort((a,b)=>b.projects.length-a.projects.length||a.name.localeCompare(b.name)).slice(0,12);
   if(!clients.length){grid.innerHTML='<div style="font-size:13px;color:var(--t3)">Sem clientes neste filtro.</div>';return;}
   clients.forEach(c=>{const main=c.projects[0];const card=document.createElement('div');card.className='client-card';card.innerHTML=`<div class="client-top"><div><div class="client-name">${h(c.name)}</div><div class="client-meta">${[...c.ams].slice(0,2).join(', ')}${c.ams.size>2?' +'+(c.ams.size-2):''}</div></div><span class="pill ${c.risco?'p-hot':c.active?'p-info':'p-ok'}">${c.risco?'Atenção':c.active?'Ativo':'OK'}</span></div><div class="client-stats"><span class="client-stat"><b>${c.projects.length}</b> projetos</span><span class="client-stat"><b>${c.active}</b> ativos</span><span class="client-stat"><b>€${Math.round(c.revenue/1000)}k</b></span></div><button class="btn btn-sm" style="margin-top:10px" onclick="openEditProj(${main.id})"><i class="ti ti-eye"></i>Ver cliente</button>`;grid.appendChild(card);});
+}
+
+function renderConcluidos(){
+  const sel=document.getElementById('done-am');const prev=sel.value;sel.innerHTML='<option value="">Todos os AMs</option>';S.ams.forEach(am=>sel.appendChild(new Option(am.name,am.id)));if(prev)sel.value=prev;
+  const ps=S.projetos.filter(p=>p.estado==='concluido'&&(!sel.value||String(p.amId)===sel.value));
+  document.getElementById('done-sub').textContent=`${ps.length} cliente${ps.length!==1?'s':''} concluído${ps.length!==1?'s':''}`;
+  const grid=document.getElementById('done-grid');grid.className='done-grid';grid.innerHTML='';
+  if(!ps.length){grid.innerHTML='<div class="card" style="color:var(--t3);font-size:13px">Sem clientes concluídos neste filtro.</div>';return;}
+  ps.forEach(p=>{
+    ensureMetricShape(p);
+    const am=getAM(p.amId),labels=projectLabels(p),totalR=p.mensal.r.reduce((a,b)=>a+b,0),totalC=p.mensal.c.reduce((a,b)=>a+b,0),totalK=p.mensal.k.reduce((a,b)=>a+b,0),avg=scoreAvg(p);
+    const max=Math.max(1,...p.mensal.r);
+    const feedback=(p.feedbackFinal||p.nota||((S.comments[p.id]||[]).filter(c=>!c.deleted).map(c=>c.text).join('\n\n'))||'Sem feedback final registado.');
+    const div=document.createElement('div');div.className='done-card';
+    div.innerHTML=`<div class="done-top"><div><div class="done-title">${h(p.cliente)}</div><div class="done-meta">${h(p.nome)} · ${labels[0]} → ${labels[labels.length-1]}</div></div>${avH(am,32)}</div><div class="done-meta">${h(am.name)} · ${h(am.role||'AM')}</div><div class="done-strip"><span class="done-mini"><b>${totalR}</b> reuniões</span><span class="done-mini"><b>${totalC}</b> cotações</span><span class="done-mini"><b>${totalK}</b> contratos</span><span class="done-mini"><b>${avg||'—'}</b> score médio</span></div><div class="mini-chart">${p.mensal.r.map((v,i)=>`<span class="mini-bar" title="${h(labels[i])}: ${v} reuniões" style="height:${Math.max(8,(v/max)*38)}px;background:${v?'var(--blue-lt)':'var(--s2)'}"></span>`).join('')}</div><div class="done-feedback">${h(feedback.length>360?feedback.slice(0,360)+'...':feedback)}</div><div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-sm" onclick="openEditProj(${p.id})"><i class="ti ti-edit"></i>Editar feedback</button><button class="btn btn-sm" onclick="document.querySelector('[data-view=&quot;equipa&quot;]').click();setTimeout(()=>openEditProj(${p.id}),100)"><i class="ti ti-chart-line"></i>Ver projeto</button></div>`;
+    grid.appendChild(div);
+  });
 }
 
 function fmtMeetDate(r){const d=r.data?new Date(r.data+'T00:00:00'):new Date();return d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});}
@@ -622,7 +673,7 @@ function saveMeetingNote(){
   S.comments[projectId].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid:projectId,author:am.name,authorInit:am.init,authorColor:am.color,authorTc:am.tc,type:'reuniao',text:note,pinned:false,ts:Date.now(),deleted:false});
   p.nota=[full,p.nota].filter(Boolean).join('\n\n');
   am.nota=[full,am.nota].filter(Boolean).join('\n\n');
-  const mIdx=new Date(date+'T00:00:00').getMonth();if(mIdx>=0&&mIdx<p.mensal.r.length){p.mensal.r[mIdx]=(p.mensal.r[mIdx]||0)+1;if(score>=1&&score<=4){const count=p.mensal.sc[mIdx]||0;p.mensal.s[mIdx]=Number((((p.mensal.s[mIdx]||0)*count+score)/(count+1)).toFixed(1));p.mensal.sc[mIdx]=count+1;}}
+  ensureMetricShape(p);let mIdx=projectMonthIndex(p,date);if(mIdx>=p.mensal.r.length){while(p.mensal.r.length<=mIdx){p.mensal.r.push(0);p.mensal.c.push(0);p.mensal.k.push(0);p.mensal.s.push(0);p.mensal.sc.push(0);}p.mensal.labels=projectLabels(p);}if(mIdx>=0&&mIdx<p.mensal.r.length){p.mensal.r[mIdx]=(p.mensal.r[mIdx]||0)+1;if(score>=1&&score<=4){const count=p.mensal.sc[mIdx]||0;p.mensal.s[mIdx]=Number((((p.mensal.s[mIdx]||0)*count+score)/(count+1)).toFixed(1));p.mensal.sc[mIdx]=count+1;}}
   document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-detect').textContent='';document.getElementById('meet-score').value='';
   if(CHARTS['ch-'+p.id]){CHARTS['ch-'+p.id].destroy();delete CHARTS['ch-'+p.id];}
   save();renderReunioes();
@@ -656,42 +707,47 @@ function openAddAM(){openModal(mS('Novo account manager',`<div class="form-row">
 
 function openEditAM(id){const am=getAM(id);openModal(mS(`Editar — ${am.name}`,`<div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-name" value="${am.name}"></div><div class="form-row"><label class="form-lbl">Função</label><input class="form-in" id="f-role" value="${am.role}"></div><div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${am.nota||''}</textarea></div>`),()=>{am.name=(document.getElementById('f-name').value||'').trim()||am.name;am.role=(document.getElementById('f-role').value||'').trim()||am.role;am.nota=document.getElementById('f-nota').value.trim();save();closeModal();renderEquipa();});}
 
-function openAddProj(){openModal(mS('Novo projeto',`<div class="form-row"><label class="form-lbl">Nome do projeto</label><input class="form-in" id="f-nome" placeholder="Ex: Expansão MENA – Cliente X"></div><div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa cliente"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est"><option value="inicio">Início</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div><div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" placeholder="Ex: Set 2025"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div>`),()=>{const nome=(document.getElementById('f-nome').value||'').trim();if(!nome)return;const pid=S.nextId++;S.projetos.push({id:pid,nome,cliente:(document.getElementById('f-cli').value||'').trim(),amId:parseInt(document.getElementById('f-am').value),estado:document.getElementById('f-est').value,pct:0,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[]});S.comments[pid]=[];save();closeModal();renderEquipa();});}
+function openAddProj(){openModal(mS('Novo projeto',`<div class="form-row"><label class="form-lbl">Nome do projeto</label><input class="form-in" id="f-nome" placeholder="Ex: Expansão MENA – Cliente X"></div><div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa cliente"></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercados" placeholder="Ex: EAU, Arábia Saudita, Qatar"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est"><option value="inicio">Início</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" placeholder="Ex: Set 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div>`),()=>{const nome=(document.getElementById('f-nome').value||'').trim();if(!nome)return;const pid=S.nextId++;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const p={id:pid,nome,cliente:(document.getElementById('f-cli').value||'').trim(),mercados:splitMarkets(document.getElementById('f-mercados').value),amId:parseInt(document.getElementById('f-am').value),estado:document.getElementById('f-est').value,pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:'',feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderEquipa();});}
 
-function openAddClient(){openModal(mS('Novo cliente',`<div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa"></div><div class="form-row"><label class="form-lbl">Oportunidade / Projeto inicial</label><input class="form-in" id="f-nome" placeholder="Ex: Entrada GCC / Prospecção MENA"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Mercado alvo</label><input class="form-in" id="f-mercado" placeholder="Ex: EAU, Qatar, MENA"></div><div class="form-row"><label class="form-lbl">Prazo / próximo marco</label><input class="form-in" id="f-prazo" placeholder="Ex: Jun 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div><div class="form-row"><label class="form-lbl">Notas iniciais</label><textarea class="form-ta" id="f-nota" placeholder="Contexto, origem do lead, próximos passos..."></textarea></div>`),()=>{const cliente=(document.getElementById('f-cli').value||'').trim();if(!cliente)return;const mercado=(document.getElementById('f-mercado').value||'').trim();const nome=(document.getElementById('f-nome').value||'').trim()||`Novo cliente${mercado?' – '+mercado:''}`;const pid=S.nextId++;S.projetos.push({id:pid,nome,cliente,amId:parseInt(document.getElementById('f-am').value),estado:'inicio',pct:0,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:(document.getElementById('f-nota').value||'').trim(),mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[{data:new Date().toLocaleDateString('pt-PT',{month:'short'}),label:'Entrada do cliente',done:true,r:0,c:0,k:0,note:'Cliente criado no pipeline'}]});S.comments[pid]=[];save();closeModal();renderPipeline();});}
+function openAddClient(){openModal(mS('Novo cliente',`<div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa"></div><div class="form-row"><label class="form-lbl">Oportunidade / Projeto inicial</label><input class="form-in" id="f-nome" placeholder="Ex: Entrada GCC / Prospecção MENA"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercado" placeholder="Ex: EAU, Qatar, MENA"></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo / próximo marco</label><input class="form-in" id="f-prazo" placeholder="Ex: Jun 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div><div class="form-row"><label class="form-lbl">Notas iniciais</label><textarea class="form-ta" id="f-nota" placeholder="Contexto, origem do lead, próximos passos..."></textarea></div>`),()=>{const cliente=(document.getElementById('f-cli').value||'').trim();if(!cliente)return;const mercado=(document.getElementById('f-mercado').value||'').trim();const nome=(document.getElementById('f-nome').value||'').trim()||`Novo cliente${mercado?' – '+mercado:''}`;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const pid=S.nextId++;const p={id:pid,nome,cliente,mercados:splitMarkets(mercado),amId:parseInt(document.getElementById('f-am').value),estado:'inicio',pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:(document.getElementById('f-nota').value||'').trim(),feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[{data:new Date(inicio+'-01T00:00:00').toLocaleDateString('pt-PT',{month:'short',year:'numeric'}),label:'Entrada do cliente',done:true,r:0,c:0,k:0,note:'Cliente criado no pipeline'}]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderPipeline();});}
 
 function openEditProj(id){
   const p=getP(id);
+  ensureMetricShape(p);
   openModal(mS('Editar projeto',`
     <div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-nome" value="${p.nome.replace(/"/g,'&quot;')}"></div>
     <div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" value="${p.cliente.replace(/"/g,'&quot;')}"></div>
+    <div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercados" value="${projectMarkets(p).join(', ').replace(/"/g,'&quot;')}" placeholder="Ex: EAU, Arábia Saudita, Qatar"></div>
     <div class="form-grid">
       <div class="form-row"><label class="form-lbl">AM</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}"${a.id===p.amId?' selected':''}>${a.name}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est">${Object.entries(SLBL).map(([v,l])=>`<option value="${v}"${p.estado===v?' selected':''}>${l}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-lbl">Progresso (%)</label><input class="form-in" id="f-pct" type="number" min="0" max="100" value="${p.pct}"></div>
+      <div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month" value="${myToMonthInput(inferStartMY(p))}"></div>
       <div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" value="${p.prazo}"></div>
       <div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" value="${p.revenue}"></div>
     </div>
-    <div style="font-size:13px;font-weight:500;color:var(--text);margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)"><i class="ti ti-chart-line" style="font-size:14px;margin-right:5px;color:var(--t3)"></i>Atualizar evolução mensal (Jan → Set)</div>
+    <div style="font-size:13px;font-weight:500;color:var(--text);margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)"><i class="ti ti-chart-line" style="font-size:14px;margin-right:5px;color:var(--t3)"></i>Atualizar evolução por período (${projectLabels(p)[0]} → ${projectLabels(p).slice(-1)[0]})</div>
     <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Reuniões</div>
-    <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:12px">${MN.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px">${m}</div><input class="form-in" id="fr-${i}" type="number" min="0" value="${p.mensal.r[i]}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>
+    ${periodInputs(p,'r','fr','min="0"')}
     <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Pedidos de cotação</div>
-    <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:12px">${MN.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px">${m}</div><input class="form-in" id="fc-${i}" type="number" min="0" value="${p.mensal.c[i]}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Contratos</div>
-    <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:12px">${MN.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px">${m}</div><input class="form-in" id="fk-${i}" type="number" min="0" value="${p.mensal.k[i]}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>
+    ${periodInputs(p,'c','fc','min="0"')}
     <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Score médio cliente (1-4)</div>
-    <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-bottom:14px">${MN.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px">${m}</div><input class="form-in" id="fs-${i}" type="number" min="0" max="4" step="0.1" value="${p.mensal.s[i]||''}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>
+    ${periodInputs(p,'s','fs','min="0" max="4" step="0.1"')}
     <div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${p.nota||''}</textarea></div>
+    <div class="form-row"><label class="form-lbl">Feedback final do cliente / projeto concluído</label><textarea class="form-ta" id="f-feedback" placeholder="Resumo do feedback recolhido, resultados, pontos fortes e melhorias...">${p.feedbackFinal||''}</textarea></div>
   `),()=>{
     p.nome=(document.getElementById('f-nome').value||'').trim()||p.nome;
     p.cliente=(document.getElementById('f-cli').value||'').trim()||p.cliente;
+    p.mercados=splitMarkets(document.getElementById('f-mercados').value);
     p.amId=parseInt(document.getElementById('f-am').value);
     p.estado=document.getElementById('f-est').value;
     p.pct=Math.min(100,Math.max(0,parseInt(document.getElementById('f-pct').value)||0));
+    p.inicio=document.getElementById('f-inicio').value||p.inicio||myToMonthInput(inferStartMY(p));delete p.mensal.labels;
     p.prazo=(document.getElementById('f-prazo').value||'').trim()||p.prazo;
     p.revenue=parseInt(document.getElementById('f-rev').value)||0;
     p.nota=document.getElementById('f-nota').value.trim();
-    for(let i=0;i<9;i++){p.mensal.r[i]=parseInt(document.getElementById(`fr-${i}`).value)||0;p.mensal.c[i]=parseInt(document.getElementById(`fc-${i}`).value)||0;p.mensal.k[i]=parseInt(document.getElementById(`fk-${i}`).value)||0;p.mensal.s[i]=Math.min(4,Math.max(0,parseFloat(document.getElementById(`fs-${i}`).value)||0));p.mensal.sc[i]=p.mensal.s[i]?Math.max(1,p.mensal.sc[i]||1):0;}
+    p.feedbackFinal=document.getElementById('f-feedback').value.trim();
+    const len=projectLabels(p).length;for(let i=0;i<len;i++){p.mensal.r[i]=parseInt(document.getElementById(`fr-${i}`).value)||0;p.mensal.c[i]=parseInt(document.getElementById(`fc-${i}`).value)||0;p.mensal.s[i]=Math.min(4,Math.max(0,parseFloat(document.getElementById(`fs-${i}`).value)||0));p.mensal.sc[i]=p.mensal.s[i]?Math.max(1,p.mensal.sc[i]||1):0;}p.mensal.labels=projectLabels(p);
     if(CHARTS['ch-'+p.id]){CHARTS['ch-'+p.id].destroy();delete CHARTS['ch-'+p.id];}
     save();closeModal();renderView(VIEW);
   });
@@ -813,8 +869,7 @@ function calAddEvent(){
   calSave();renderCalendario();
 }
 
-
-  renderGM();renderOverview();
-                           </script>
+renderGM();renderOverview();
+</script>
 </body>
 </html>
