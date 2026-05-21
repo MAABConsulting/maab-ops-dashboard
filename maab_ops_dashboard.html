@@ -407,7 +407,7 @@ let VIEW='overview';
 document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.view;document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
 document.getElementById('global-search').addEventListener('keydown',e=>{if(e.key==='Enter')openSearchResults();});
 function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='reunioes')renderReunioes();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
-
+ 
 document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 if(S.lastSaved){const el=document.getElementById('last-saved');const d=new Date(S.lastSaved);if(el)el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
 
