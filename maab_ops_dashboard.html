@@ -71,6 +71,10 @@ input,select,textarea,button{font-family:var(--font)}
 .cmd-search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
 .cmd-actions{display:flex;gap:8px;flex-wrap:wrap}
 .cmd-status{font-size:11px;color:var(--t3);white-space:nowrap}
+.session-box{display:flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:5px 8px}
+.session-box i{font-size:14px;color:var(--t3)}
+.session-select{border:none;background:transparent;color:var(--text);font-size:12px;outline:none;max-width:190px}
+.session-chip{font-size:11px;color:var(--t3);white-space:nowrap}
 .search-results{display:grid;gap:8px}
 .search-hit{width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:10px 12px;cursor:pointer;color:var(--text)}
 .search-hit:hover{background:var(--s2)}
@@ -258,6 +262,11 @@ input,select,textarea,button{font-family:var(--font)}
       <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
       <input class="hidden-file" type="file" id="import-file" accept="application/json" onchange="importData(event)">
     </div>
+    <div class="session-box">
+      <i class="ti ti-user-shield"></i>
+      <select class="session-select" id="session-select" onchange="setSession(this.value)"></select>
+      <span class="session-chip" id="session-chip"></span>
+    </div>
     <div class="cmd-status" id="cmd-status"></div>
   </div>
   <div class="view active" id="view-overview">
@@ -406,10 +415,23 @@ notas:[{id:1,titulo:'Reunião semanal equipa',texto:'Próxima sexta 10h. Agenda:
 let S=(()=>{try{const r=localStorage.getItem(STORE);if(r)return JSON.parse(r);}catch(e){}return JSON.parse(JSON.stringify(DEF));})();
 if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));
 S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});
+const SESSION_STORE='maab_session_v1';
+let SESSION=(()=>{try{return localStorage.getItem(SESSION_STORE)||'admin';}catch(e){return'admin';}})();
 
 function save(){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();}
 function getAM(id){return S.ams.find(a=>a.id===id)||{name:'—',init:'?',color:'#eee',tc:'#888'};}
 function getP(id){return S.projetos.find(p=>p.id===id);}
+function isAdmin(){return SESSION==='admin';}
+function activeAmId(){const m=String(SESSION).match(/^am:(\d+)$/);return m?parseInt(m[1]):null;}
+function activeAM(){return getAM(activeAmId());}
+function canSeeProject(p){return isAdmin()||p.amId===activeAmId();}
+function visibleProjects(){return S.projetos.filter(canSeeProject);}
+function visibleAMs(){return isAdmin()?S.ams:S.ams.filter(a=>a.id===activeAmId());}
+function amOptions(selectedId){return visibleAMs().map(a=>`<option value="${a.id}"${a.id===selectedId?' selected':''}>${a.name}</option>`).join('');}
+function textMatchesProject(txt,p){const n=normText(txt);return n.includes(normText(p.nome))||n.includes(normText(p.cliente));}
+function itemMatchesSession(item){if(isAdmin())return true;if(item.ownerAmId&&item.ownerAmId===activeAmId())return true;const am=activeAM();const txt=[item.title,item.body,item.label,item.who,item.titulo,item.proximo,item.nota].join(' ');if(normText(txt).includes(normText(am.name))||normText(txt).includes(normText(am.init)))return true;return visibleProjects().some(p=>textMatchesProject(txt,p));}
+function setSession(v){SESSION=v||'admin';try{localStorage.setItem(SESSION_STORE,SESSION);}catch(e){}initSessionUI();if(!isAdmin()&&(VIEW==='mercados'||VIEW==='notas'))document.querySelector('[data-view="overview"]').click();else renderView(VIEW);}
+function initSessionUI(){const sel=document.getElementById('session-select');if(!sel)return;const prev=SESSION;sel.innerHTML='<option value="admin">Administrador</option>'+S.ams.map(a=>`<option value="am:${a.id}">${a.name}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===prev)?prev:'admin';SESSION=sel.value;const chip=document.getElementById('session-chip');if(chip)chip.textContent=isAdmin()?'acesso total':'visão AM';document.querySelectorAll('[data-view="mercados"],[data-view="notas"]').forEach(b=>b.style.display=isAdmin()?'flex':'none');document.querySelectorAll('button[onclick="openAddAM()"]').forEach(b=>b.style.display=isAdmin()?'inline-flex':'none');}
 function tsR(t){const d=Math.floor((Date.now()-t)/1000);if(d<60)return'agora';if(d<3600)return`há ${Math.floor(d/60)}min`;if(d<86400)return`há ${Math.floor(d/3600)}h`;return new Date(t).toLocaleDateString('pt-PT',{day:'numeric',month:'short'});}
 function avH(am,sz=30){return`<div class="av" style="width:${sz}px;height:${sz}px;background:${am.color};color:${am.tc};font-size:${Math.round(sz*.36)}px">${am.init}</div>`;}
 function h(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -428,8 +450,8 @@ function splitMarkets(v){return String(v||'').split(/[,;|]/).map(x=>x.trim()).fi
 function phaseMonthIndexes(p,f){const labels=projectLabels(p);const raw=String(f.data||'');const parts=raw.split(/[–-]/).map(x=>parseMY(x, inferStartMY(p).y)).filter(Boolean);let start=parts[0],end=parts[1]||parts[0];if(!start){const i=(p.fases||[]).indexOf(f);return[i>=0&&i<labels.length?i:0];}let a=(start.y-inferStartMY(p).y)*12+(start.m-inferStartMY(p).m),b=(end.y-inferStartMY(p).y)*12+(end.m-inferStartMY(p).m);if(b<a)b=a;const idx=[];for(let i=Math.max(0,a);i<=Math.min(labels.length-1,b);i++)idx.push(i);return idx.length?idx:[Math.max(0,Math.min(labels.length-1,a))];}
 function phaseKPIs(p,f){const idx=phaseMonthIndexes(p,f);const labels=projectLabels(p);const r=idx.reduce((s,i)=>s+(p.mensal.r[i]||0),0);const c=idx.reduce((s,i)=>s+(p.mensal.c[i]||0),0);const scores=idx.map(i=>p.mensal.s[i]||0).filter(Boolean);const score=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'';const period=idx.map(i=>labels[i]).join(', ');return{r,c,score,period};}
 function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0}));let active=rows.filter(x=>x.r||x.c||x.score);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span></div>`).join('');}
-function updateCommandStatus(){const openAlerts=S.alertas.filter(a=>!a.done).length;const overdue=S.projetos.filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
-function buildSearchIndex(){const hits=[];S.projetos.forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});S.ams.forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${S.projetos.filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
+function updateCommandStatus(){const alerts=S.alertas.filter(a=>itemMatchesSession(a));const openAlerts=alerts.filter(a=>!a.done).length;const overdue=visibleProjects().filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
+function buildSearchIndex(){const hits=[];visibleProjects().forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});visibleAMs().forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${visibleProjects().filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId()).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.filter(a=>itemMatchesSession(a)).forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.filter(t=>itemMatchesSession(t)).forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));if(isAdmin())S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
 function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!terms.length)return[];return buildSearchIndex().filter(x=>terms.every(t=>x.text.toLowerCase().includes(t)||x.title.toLowerCase().includes(t)||x.meta.toLowerCase().includes(t))).slice(0,12);}
 function openSearchResults(){const input=document.getElementById('global-search');const q=input?input.value.trim():'';const hits=getSearchResults(q);const body=!q?'<div style="font-size:13px;color:var(--t3);padding:10px 0">Escreva uma pesquisa para procurar em projetos, clientes, equipa, alertas, tarefas e notas.</div>':hits.length?`<div class="search-results">${hits.map(x=>`<button class="search-hit" onclick="goSearchHit('${x.view}')"><div class="search-hit-top"><i class="ti ${x.icon}" style="font-size:14px;color:var(--t3)"></i><span class="search-hit-type">${h(x.type)}</span></div><div class="search-hit-title">${h(x.title)}</div><div class="search-hit-meta">${h(x.meta)}</div></button>`).join('')}</div>`:'<div style="font-size:13px;color:var(--t3);padding:10px 0">Sem resultados para esta pesquisa.</div>';openModal(`<div class="modal-head"><div class="modal-title">Resultados da pesquisa</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}`,null);}
 function goSearchHit(view){closeModal();const btn=document.querySelector(`[data-view="${view}"]`);if(btn)btn.click();}
@@ -437,7 +459,7 @@ function exportData(){const payload={exportedAt:new Date().toISOString(),version
 function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
 
 let VIEW='overview';
-document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.view;document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
+document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{let v=b.dataset.view;if(!isAdmin()&&(v==='mercados'||v==='notas'))v='overview';const btn=document.querySelector(`[data-view="${v}"]`);document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
 document.getElementById('global-search').addEventListener('keydown',e=>{if(e.key==='Enter')openSearchResults();});
 function renderView(v){if(v==='overview')renderOverview();else if(v==='equipa')renderEquipa();else if(v==='pipeline')renderPipeline();else if(v==='concluidos')renderConcluidos();else if(v==='reunioes')renderReunioes();else if(v==='calendario')renderCalendario();else if(v==='alertas')renderAlertas();else if(v==='checklist')renderChecklist('check-full');else if(v==='mercados')renderMercados();else if(v==='notas')renderNotas();}
 
@@ -445,28 +467,29 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
 if(S.lastSaved){const el=document.getElementById('last-saved');const d=new Date(S.lastSaved);if(el)el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}
 
 function renderGM(){
-  const total=S.projetos.length,ativos=S.projetos.filter(p=>p.estado==='active'||p.estado==='inicio').length;
-  const risco=S.projetos.filter(p=>p.estado==='risco').length,done=S.projetos.filter(p=>p.estado==='concluido').length;
-  const rev=S.projetos.reduce((s,p)=>s+p.revenue,0);
-  document.getElementById('gm').innerHTML=`<div class="mc"><div class="mc-l">Projetos totais</div><div class="mc-v">${total}</div><div class="mc-s">${S.ams.length} AMs</div></div><div class="mc"><div class="mc-l">Ativos</div><div class="mc-v">${ativos}</div></div><div class="mc"><div class="mc-l">Em risco</div><div class="mc-v" style="color:var(--amber)">${risco}</div></div><div class="mc"><div class="mc-l">Concluídos</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Revenue est.</div><div class="mc-v">€${Math.round(rev/1000)}k</div></div>`;
-  document.getElementById('sb-ac').textContent=S.alertas.filter(a=>!a.done).length;
+  const ps=visibleProjects();
+  const total=ps.length,ativos=ps.filter(p=>p.estado==='active'||p.estado==='inicio').length;
+  const risco=ps.filter(p=>p.estado==='risco').length,done=ps.filter(p=>p.estado==='concluido').length;
+  const rev=ps.reduce((s,p)=>s+p.revenue,0);
+  document.getElementById('gm').innerHTML=`<div class="mc"><div class="mc-l">Sessão</div><div class="mc-v" style="font-size:18px">${isAdmin()?'Administrador':activeAM().init}</div><div class="mc-s">${isAdmin()?S.ams.length+' AMs':activeAM().name}</div></div><div class="mc"><div class="mc-l">Projetos</div><div class="mc-v">${total}</div></div><div class="mc"><div class="mc-l">Ativos</div><div class="mc-v">${ativos}</div></div><div class="mc"><div class="mc-l">Em risco</div><div class="mc-v" style="color:var(--amber)">${risco}</div></div><div class="mc"><div class="mc-l">Concluídos</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Revenue est.</div><div class="mc-v">€${Math.round(rev/1000)}k</div></div>`;
+  document.getElementById('sb-ac').textContent=S.alertas.filter(a=>!a.done&&itemMatchesSession(a)).length;
   updateCommandStatus();
 }
 
 function renderOverview(){
   renderGM();
   const t=document.getElementById('ov-team');t.innerHTML='';
-  S.ams.forEach(am=>{const ps=S.projetos.filter(p=>p.amId===am.id);const med=ps.length?Math.round(ps.reduce((s,p)=>s+p.pct,0)/ps.length):0;const risco=ps.filter(p=>p.estado==='risco').length;const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer';d.innerHTML=`${avH(am,28)}<div style="flex:1"><div style="font-size:13px;font-weight:500">${am.name}</div><div style="font-size:11px;color:var(--t3)">${ps.length} projetos${risco>0?` · <span style="color:var(--amber)">${risco} em risco</span>`:''}</div></div><div style="width:65px"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}%</div></div>`;d.onclick=()=>document.querySelector('[data-view="equipa"]').click();t.appendChild(d);});
+  visibleAMs().forEach(am=>{const ps=visibleProjects().filter(p=>p.amId===am.id);const med=ps.length?Math.round(ps.reduce((s,p)=>s+p.pct,0)/ps.length):0;const risco=ps.filter(p=>p.estado==='risco').length;const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer';d.innerHTML=`${avH(am,28)}<div style="flex:1"><div style="font-size:13px;font-weight:500">${am.name}</div><div style="font-size:11px;color:var(--t3)">${ps.length} projetos${risco>0?` · <span style="color:var(--amber)">${risco} em risco</span>`:''}</div></div><div style="width:65px"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}%</div></div>`;d.onclick=()=>document.querySelector('[data-view="equipa"]').click();t.appendChild(d);});
   const al=document.getElementById('ov-alerts');al.innerHTML='';
-  S.alertas.filter(a=>!a.done).slice(0,3).forEach(a=>{const m=AM_COL[a.tipo];const d=document.createElement('div');d.className=`alert-box ${m.cls}`;d.style.marginBottom='7px';d.innerHTML=`<i class="ti ${m.ic}" style="font-size:14px;color:${m.col};flex-shrink:0;margin-top:1px"></i><div><div class="al-title">${a.title}</div><div class="al-body">${a.body}</div></div>`;al.appendChild(d);});
-  if(!S.alertas.filter(a=>!a.done).length)al.innerHTML='<div style="font-size:13px;color:var(--t3);padding:.5rem">Sem alertas abertos.</div>';
+  S.alertas.filter(a=>!a.done&&itemMatchesSession(a)).slice(0,3).forEach(a=>{const m=AM_COL[a.tipo];const d=document.createElement('div');d.className=`alert-box ${m.cls}`;d.style.marginBottom='7px';d.innerHTML=`<i class="ti ${m.ic}" style="font-size:14px;color:${m.col};flex-shrink:0;margin-top:1px"></i><div><div class="al-title">${a.title}</div><div class="al-body">${a.body}</div></div>`;al.appendChild(d);});
+  if(!S.alertas.filter(a=>!a.done&&itemMatchesSession(a)).length)al.innerHTML='<div style="font-size:13px;color:var(--t3);padding:.5rem">Sem alertas abertos.</div>';
   renderChecklist('ov-check',4);
 }
 
 function renderEquipa(){
   const el=document.getElementById('equipa-container');el.innerHTML='';
-  S.ams.forEach(am=>{
-    const ps=S.projetos.filter(p=>p.amId===am.id);
+  visibleAMs().forEach(am=>{
+    const ps=visibleProjects().filter(p=>p.amId===am.id);
     const reu=ps.reduce((s,p)=>s+p.mensal.r.reduce((a,b)=>a+b,0),0);
     const cot=ps.reduce((s,p)=>s+p.mensal.c.reduce((a,b)=>a+b,0),0);
     const rev=ps.reduce((s,p)=>s+p.revenue,0);
@@ -569,16 +592,17 @@ function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div clas
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
 
 function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:projectLabels(p),datasets:[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
-function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);if(!ta||!sel)return;const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:'Gestor',authorInit:'GM',authorColor:'#E6F1FB',authorTc:'#185FA5',type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
+function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);const p=getP(pid);if(!ta||!sel||!p||!canSeeProject(p))return;const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];const author=isAdmin()?{name:'Gestor',init:'GM',color:'#E6F1FB',tc:'#185FA5'}:{name:activeAM().name,init:activeAM().init,color:activeAM().color,tc:activeAM().tc};S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:author.name,authorInit:author.init,authorColor:author.color,authorTc:author.tc,type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
 function togglePin(cid,pid){const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.pinned=!c.pinned;save();renderEquipa();}}
 function delComm(cid,pid){if(!confirm('Apagar comentário?'))return;const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.deleted=true;save();renderEquipa();}}
 
 function renderPipeline(){
   const amF=document.getElementById('fil-am').value;const estF=document.getElementById('fil-est').value;
   const amSel=document.getElementById('fil-am');while(amSel.options.length>1)amSel.remove(1);
-  S.ams.forEach(am=>{const o=new Option(am.name,am.id);amSel.appendChild(o);});
-  if(amF){for(let i=0;i<amSel.options.length;i++)if(amSel.options[i].value==amF){amSel.selectedIndex=i;break;}}
-  const ps=S.projetos.filter(p=>p.estado!=='concluido'&&(!amF||p.amId==amF)&&(!estF||p.estado===estF));
+  visibleAMs().forEach(am=>{const o=new Option(am.name,am.id);amSel.appendChild(o);});
+  if(!isAdmin()){amSel.value=String(activeAmId());amSel.disabled=true;}else{amSel.disabled=false;if(amF){for(let i=0;i<amSel.options.length;i++)if(amSel.options[i].value==amF){amSel.selectedIndex=i;break;}}}
+  const selectedAm=isAdmin()?amSel.value:String(activeAmId());
+  const ps=visibleProjects().filter(p=>p.estado!=='concluido'&&(!selectedAm||p.amId==selectedAm)&&(!estF||p.estado===estF));
   const totalClientes=new Set(ps.map(p=>p.cliente||'Sem cliente')).size;
   document.getElementById('pip-sub').textContent=`${totalClientes} cliente${totalClientes!==1?'s':''} ${totalClientes!==1?'atuais':'atual'}`;
   renderClientGrid(ps);
@@ -593,8 +617,8 @@ function renderClientGrid(projects){
 }
 
 function renderConcluidos(){
-  const sel=document.getElementById('done-am');const prev=sel.value;sel.innerHTML='<option value="">Todos os AMs</option>';S.ams.forEach(am=>sel.appendChild(new Option(am.name,am.id)));if(prev)sel.value=prev;
-  const ps=S.projetos.filter(p=>p.estado==='concluido'&&(!sel.value||String(p.amId)===sel.value));
+  const sel=document.getElementById('done-am');const prev=sel.value;sel.innerHTML='<option value="">Todos os AMs</option>';visibleAMs().forEach(am=>sel.appendChild(new Option(am.name,am.id)));if(!isAdmin()){sel.value=String(activeAmId());sel.disabled=true;}else{sel.disabled=false;if(prev)sel.value=prev;}
+  const ps=visibleProjects().filter(p=>p.estado==='concluido'&&(!sel.value||String(p.amId)===sel.value));
   document.getElementById('done-sub').textContent=`${ps.length} cliente${ps.length!==1?'s':''} concluído${ps.length!==1?'s':''}`;
   const grid=document.getElementById('done-grid');grid.className='done-grid';grid.innerHTML='';
   if(!ps.length){grid.innerHTML='<div class="card" style="color:var(--t3);font-size:13px">Sem clientes concluídos neste filtro.</div>';return;}
@@ -615,7 +639,7 @@ function updateMeetingProjects(){
   const sel=document.getElementById('meet-project');if(!sel)return;
   const prev=sel.value;
   sel.innerHTML='';
-  S.projetos.filter(p=>!amId||p.amId===amId).forEach(p=>sel.appendChild(new Option(`${p.nome} · ${p.cliente}`,p.id)));
+  visibleProjects().filter(p=>!amId||p.amId===amId).forEach(p=>sel.appendChild(new Option(`${p.nome} · ${p.cliente}`,p.id)));
   if(prev&&[...sel.options].some(o=>o.value===prev))sel.value=prev;
 }
 function normText(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
@@ -648,20 +672,22 @@ function renderReunioes(){
   const amSelect=document.getElementById('meet-am'),filterAm=document.getElementById('meet-fil-am'),filterStatus=document.getElementById('meet-fil-status');
   const prevAm=amSelect.value,prevFilter=filterAm.value,prevStatus=filterStatus.value;
   amSelect.innerHTML='';filterAm.innerHTML='<option value="">Todos os AMs</option>';
-  S.ams.forEach(am=>{amSelect.appendChild(new Option(am.name,am.id));filterAm.appendChild(new Option(am.name,am.id));});
-  if(prevAm)amSelect.value=prevAm;if(prevFilter)filterAm.value=prevFilter;if(prevStatus)filterStatus.value=prevStatus;
+  visibleAMs().forEach(am=>{amSelect.appendChild(new Option(am.name,am.id));filterAm.appendChild(new Option(am.name,am.id));});
+  if(!isAdmin()){amSelect.value=String(activeAmId());filterAm.value=String(activeAmId());amSelect.disabled=true;filterAm.disabled=true;}else{amSelect.disabled=false;filterAm.disabled=false;if(prevAm)amSelect.value=prevAm;if(prevFilter)filterAm.value=prevFilter;}if(prevStatus)filterStatus.value=prevStatus;
   if(!document.getElementById('meet-date').value)document.getElementById('meet-date').value=new Date().toISOString().slice(0,10);
   updateMeetingProjects();
-  const meetings=(S.reunioes||[]).filter(r=>(!filterAm.value||String(r.amId)===filterAm.value)&&(!filterStatus.value||r.status===filterStatus.value)).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora));
-  const total=S.reunioes.length,done=S.reunioes.filter(r=>r.status==='realizada').length,follow=S.reunioes.filter(r=>r.status==='followup').length,planned=S.reunioes.filter(r=>r.status==='agendada').length;
+  const allMeetings=(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId());
+  const meetings=allMeetings.filter(r=>(!filterAm.value||String(r.amId)===filterAm.value)&&(!filterStatus.value||r.status===filterStatus.value)).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora));
+  const total=allMeetings.length,done=allMeetings.filter(r=>r.status==='realizada').length,follow=allMeetings.filter(r=>r.status==='followup').length,planned=allMeetings.filter(r=>r.status==='agendada').length;
   document.getElementById('meet-metrics').innerHTML=`<div class="mc"><div class="mc-l">Registos</div><div class="mc-v">${total}</div></div><div class="mc"><div class="mc-l">Realizadas</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Follow-up</div><div class="mc-v" style="color:var(--amber)">${follow}</div></div><div class="mc"><div class="mc-l">Agendadas</div><div class="mc-v" style="color:var(--blue)">${planned}</div></div>`;
   const feed=document.getElementById('meet-body');feed.innerHTML='';
   if(!meetings.length){feed.innerHTML='<div class="card" style="text-align:center;color:var(--t3);font-size:13px">Sem registos de reunião neste filtro.</div>';return;}
   meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}${r.score?' · Score '+r.score+'/4':''}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto e na pasta do AM</div></div>`;feed.appendChild(c);});
 }
 function saveMeetingNote(){
-  const amId=parseInt(document.getElementById('meet-am').value),projectId=parseInt(document.getElementById('meet-project').value);
+  const amId=isAdmin()?parseInt(document.getElementById('meet-am').value):activeAmId(),projectId=parseInt(document.getElementById('meet-project').value);
   const am=getAM(amId),p=getP(projectId),note=(document.getElementById('meet-note').value||'').trim();
+  if(!isAdmin()&&(!p||p.amId!==activeAmId()))return alert('Esta sessão só pode registar reuniões nos seus próprios projetos.');
   if(!amId||!p||!note)return alert('Escolha o AM, o projeto e escreva a informação da reunião.');
   const date=document.getElementById('meet-date').value||new Date().toISOString().slice(0,10),status=document.getElementById('meet-status').value,score=parseInt(document.getElementById('meet-score').value)||0;
   const stamp=new Date(date+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});
@@ -681,14 +707,15 @@ function saveMeetingNote(){
 
 function renderAlertas(){
   const el=document.getElementById('alertas-list');el.innerHTML='';
-  S.alertas.forEach(a=>{const m=AM_COL[a.tipo];const d=document.createElement('div');d.className=`alert-box ${m.cls}`;d.style.opacity=a.done?'.4':'1';d.style.marginBottom='8px';d.innerHTML=`<i class="ti ${m.ic}" style="font-size:14px;color:${m.col};flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div class="al-title">${a.title}</div><div class="al-body">${a.body}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-sm" onclick="toggleAlert(${a.id})">${a.done?'Reabrir':'Fechar'}</button><button class="btn btn-sm btn-d" onclick="delAlert(${a.id})"><i class="ti ti-trash"></i></button></div>`;el.appendChild(d);});
-  if(!S.alertas.length)el.innerHTML='<div style="padding:2rem;text-align:center;color:var(--t3);font-size:13px">Sem alertas.</div>';
-  document.getElementById('sb-ac').textContent=S.alertas.filter(a=>!a.done).length;
+  const list=S.alertas.filter(a=>itemMatchesSession(a));
+  list.forEach(a=>{const m=AM_COL[a.tipo];const d=document.createElement('div');d.className=`alert-box ${m.cls}`;d.style.opacity=a.done?'.4':'1';d.style.marginBottom='8px';d.innerHTML=`<i class="ti ${m.ic}" style="font-size:14px;color:${m.col};flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div class="al-title">${a.title}</div><div class="al-body">${a.body}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-sm" onclick="toggleAlert(${a.id})">${a.done?'Reabrir':'Fechar'}</button><button class="btn btn-sm btn-d" onclick="delAlert(${a.id})"><i class="ti ti-trash"></i></button></div>`;el.appendChild(d);});
+  if(!list.length)el.innerHTML='<div style="padding:2rem;text-align:center;color:var(--t3);font-size:13px">Sem alertas nesta sessão.</div>';
+  document.getElementById('sb-ac').textContent=list.filter(a=>!a.done).length;
 }
 function toggleAlert(id){const a=S.alertas.find(x=>x.id===id);if(a){a.done=!a.done;save();renderAlertas();}}
 function delAlert(id){if(!confirm('Apagar?'))return;S.alertas=S.alertas.filter(a=>a.id!==id);save();renderAlertas();}
 
-function renderChecklist(id,limit){const el=document.getElementById(id);if(!el)return;el.innerHTML='';const list=limit?S.tarefas.slice(0,limit):S.tarefas;list.forEach(t=>{const d=document.createElement('div');d.className='check-item'+(t.done?' done':'');d.innerHTML=`<div class="chkbox">${t.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}</div><div style="flex:1"><div class="ch-lbl">${t.label}</div><div class="ch-who">${t.who}</div></div>${id==='check-full'?`<button class="btn btn-sm btn-d" onclick="delTask(${t.id});event.stopPropagation()"><i class="ti ti-trash"></i></button>`:''}`;d.onclick=()=>{t.done=!t.done;save();renderChecklist(id,limit);if(id==='check-full')renderChecklist('ov-check',4);};el.appendChild(d);});if(!list.length)el.innerHTML='<div style="padding:1rem;text-align:center;color:var(--t3);font-size:13px">Sem tarefas.</div>';}
+function renderChecklist(id,limit){const el=document.getElementById(id);if(!el)return;el.innerHTML='';const base=S.tarefas.filter(t=>itemMatchesSession(t));const list=limit?base.slice(0,limit):base;list.forEach(t=>{const d=document.createElement('div');d.className='check-item'+(t.done?' done':'');d.innerHTML=`<div class="chkbox">${t.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}</div><div style="flex:1"><div class="ch-lbl">${t.label}</div><div class="ch-who">${t.who}</div></div>${id==='check-full'?`<button class="btn btn-sm btn-d" onclick="delTask(${t.id});event.stopPropagation()"><i class="ti ti-trash"></i></button>`:''}`;d.onclick=()=>{t.done=!t.done;save();renderChecklist(id,limit);if(id==='check-full')renderChecklist('ov-check',4);};el.appendChild(d);});if(!list.length)el.innerHTML='<div style="padding:1rem;text-align:center;color:var(--t3);font-size:13px">Sem tarefas nesta sessão.</div>';}
 function delTask(id){if(!confirm('Apagar?'))return;S.tarefas=S.tarefas.filter(t=>t.id!==id);save();renderChecklist('check-full');}
 
 const MKTS=[{flag:'🇦🇪',name:'Emirados Árabes Unidos',score:92,pill:'p-hot',label:'Prioritário',tags:'Têxtil · F&B · TI · Logística'},{flag:'🇸🇦',name:'Arábia Saudita',score:85,pill:'p-hot',label:'Prioritário',tags:'Construção · Saúde · Serviços'},{flag:'🇶🇦',name:'Qatar',score:78,pill:'p-ok',label:'Em crescimento',tags:'F&B · Educação · Premium'},{flag:'🇰🇼',name:'Kuwait',score:68,pill:'p-warn',label:'Monitorizar',tags:'Móveis · Têxtil · Cosméticos'},{flag:'🇴🇲',name:'Omã',score:62,pill:'p-warn',label:'Monitorizar',tags:'Logística · Construção'},{flag:'🇧🇭',name:'Bahrain',score:55,pill:'p-info',label:'Emergente',tags:'TI · Educação · F&B'}];
@@ -703,23 +730,24 @@ function closeModal(){document.getElementById('modal-ov').classList.remove('open
 document.getElementById('modal-ov').onclick=e=>{if(e.target===e.currentTarget)closeModal();};
 function mS(title,body){return`<div class="modal-head"><div class="modal-title">${title}</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}<div class="modal-ft"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-p" id="m-save">Guardar</button></div>`;}
 
-function openAddAM(){openModal(mS('Novo account manager',`<div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-name" placeholder="Nome completo"></div><div class="form-row"><label class="form-lbl">Função</label><input class="form-in" id="f-role" placeholder="AM Sénior / AM / AM Junior"></div>`),()=>{const name=(document.getElementById('f-name').value||'').trim();if(!name)return;const role=(document.getElementById('f-role').value||'').trim();const init=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();const cols=['#B5D4F4','#9FE1CB','#F5C4B3','#FAC775','#CECBF6','#F4C0D1','#C0DD97'];const tcs=['#0C447C','#085041','#712B13','#633806','#3C3489','#72243E','#27500A'];const i=S.ams.length%cols.length;S.ams.push({id:S.nextId++,name,init,color:cols[i],tc:tcs[i],role:role||'AM',nota:''});save();closeModal();renderEquipa();});}
+function openAddAM(){if(!isAdmin())return alert('Só o administrador pode criar novos Account Managers.');openModal(mS('Novo account manager',`<div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-name" placeholder="Nome completo"></div><div class="form-row"><label class="form-lbl">Função</label><input class="form-in" id="f-role" placeholder="AM Sénior / AM / AM Junior"></div>`),()=>{const name=(document.getElementById('f-name').value||'').trim();if(!name)return;const role=(document.getElementById('f-role').value||'').trim();const init=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();const cols=['#B5D4F4','#9FE1CB','#F5C4B3','#FAC775','#CECBF6','#F4C0D1','#C0DD97'];const tcs=['#0C447C','#085041','#712B13','#633806','#3C3489','#72243E','#27500A'];const i=S.ams.length%cols.length;S.ams.push({id:S.nextId++,name,init,color:cols[i],tc:tcs[i],role:role||'AM',nota:''});save();closeModal();initSessionUI();renderEquipa();});}
 
-function openEditAM(id){const am=getAM(id);openModal(mS(`Editar — ${am.name}`,`<div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-name" value="${am.name}"></div><div class="form-row"><label class="form-lbl">Função</label><input class="form-in" id="f-role" value="${am.role}"></div><div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${am.nota||''}</textarea></div>`),()=>{am.name=(document.getElementById('f-name').value||'').trim()||am.name;am.role=(document.getElementById('f-role').value||'').trim()||am.role;am.nota=document.getElementById('f-nota').value.trim();save();closeModal();renderEquipa();});}
+function openEditAM(id){if(!isAdmin()&&id!==activeAmId())return alert('Esta sessão só pode editar o seu próprio perfil.');const am=getAM(id);openModal(mS(`Editar — ${am.name}`,`<div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-name" value="${am.name}"></div><div class="form-row"><label class="form-lbl">Função</label><input class="form-in" id="f-role" value="${am.role}"></div><div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${am.nota||''}</textarea></div>`),()=>{am.name=(document.getElementById('f-name').value||'').trim()||am.name;am.role=(document.getElementById('f-role').value||'').trim()||am.role;am.nota=document.getElementById('f-nota').value.trim();save();closeModal();renderEquipa();});}
 
-function openAddProj(){openModal(mS('Novo projeto',`<div class="form-row"><label class="form-lbl">Nome do projeto</label><input class="form-in" id="f-nome" placeholder="Ex: Expansão MENA – Cliente X"></div><div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa cliente"></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercados" placeholder="Ex: EAU, Arábia Saudita, Qatar"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est"><option value="inicio">Início</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" placeholder="Ex: Set 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div>`),()=>{const nome=(document.getElementById('f-nome').value||'').trim();if(!nome)return;const pid=S.nextId++;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const p={id:pid,nome,cliente:(document.getElementById('f-cli').value||'').trim(),mercados:splitMarkets(document.getElementById('f-mercados').value),amId:parseInt(document.getElementById('f-am').value),estado:document.getElementById('f-est').value,pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:'',feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderEquipa();});}
+function openAddProj(){openModal(mS('Novo projeto',`<div class="form-row"><label class="form-lbl">Nome do projeto</label><input class="form-in" id="f-nome" placeholder="Ex: Expansão MENA – Cliente X"></div><div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa cliente"></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercados" placeholder="Ex: EAU, Arábia Saudita, Qatar"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${amOptions(activeAmId())}</select></div><div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est"><option value="inicio">Início</option><option value="active">Em curso</option><option value="risco">Em risco</option><option value="pausa">Em pausa</option><option value="concluido">Concluído</option></select></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" placeholder="Ex: Set 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div>`),()=>{const nome=(document.getElementById('f-nome').value||'').trim();if(!nome)return;const pid=S.nextId++;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const p={id:pid,nome,cliente:(document.getElementById('f-cli').value||'').trim(),mercados:splitMarkets(document.getElementById('f-mercados').value),amId:parseInt(document.getElementById('f-am').value),estado:document.getElementById('f-est').value,pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:'',feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderEquipa();});}
 
-function openAddClient(){openModal(mS('Novo cliente',`<div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa"></div><div class="form-row"><label class="form-lbl">Oportunidade / Projeto inicial</label><input class="form-in" id="f-nome" placeholder="Ex: Entrada GCC / Prospecção MENA"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercado" placeholder="Ex: EAU, Qatar, MENA"></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo / próximo marco</label><input class="form-in" id="f-prazo" placeholder="Ex: Jun 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div><div class="form-row"><label class="form-lbl">Notas iniciais</label><textarea class="form-ta" id="f-nota" placeholder="Contexto, origem do lead, próximos passos..."></textarea></div>`),()=>{const cliente=(document.getElementById('f-cli').value||'').trim();if(!cliente)return;const mercado=(document.getElementById('f-mercado').value||'').trim();const nome=(document.getElementById('f-nome').value||'').trim()||`Novo cliente${mercado?' – '+mercado:''}`;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const pid=S.nextId++;const p={id:pid,nome,cliente,mercados:splitMarkets(mercado),amId:parseInt(document.getElementById('f-am').value),estado:'inicio',pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:(document.getElementById('f-nota').value||'').trim(),feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[{data:new Date(inicio+'-01T00:00:00').toLocaleDateString('pt-PT',{month:'short',year:'numeric'}),label:'Entrada do cliente',done:true,r:0,c:0,k:0,note:'Cliente criado no pipeline'}]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderPipeline();});}
+function openAddClient(){openModal(mS('Novo cliente',`<div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" placeholder="Nome da empresa"></div><div class="form-row"><label class="form-lbl">Oportunidade / Projeto inicial</label><input class="form-in" id="f-nome" placeholder="Ex: Entrada GCC / Prospecção MENA"></div><div class="form-grid"><div class="form-row"><label class="form-lbl">Account manager</label><select class="form-sel" id="f-am">${amOptions(activeAmId())}</select></div><div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercado" placeholder="Ex: EAU, Qatar, MENA"></div><div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month"></div><div class="form-row"><label class="form-lbl">Prazo / próximo marco</label><input class="form-in" id="f-prazo" placeholder="Ex: Jun 2026"></div><div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" placeholder="0"></div></div><div class="form-row"><label class="form-lbl">Notas iniciais</label><textarea class="form-ta" id="f-nota" placeholder="Contexto, origem do lead, próximos passos..."></textarea></div>`),()=>{const cliente=(document.getElementById('f-cli').value||'').trim();if(!cliente)return;const mercado=(document.getElementById('f-mercado').value||'').trim();const nome=(document.getElementById('f-nome').value||'').trim()||`Novo cliente${mercado?' – '+mercado:''}`;const inicio=document.getElementById('f-inicio').value||new Date().toISOString().slice(0,7);const pid=S.nextId++;const p={id:pid,nome,cliente,mercados:splitMarkets(mercado),amId:parseInt(document.getElementById('f-am').value),estado:'inicio',pct:0,inicio,prazo:(document.getElementById('f-prazo').value||'').trim()||'—',revenue:parseInt(document.getElementById('f-rev').value)||0,nota:(document.getElementById('f-nota').value||'').trim(),feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[{data:new Date(inicio+'-01T00:00:00').toLocaleDateString('pt-PT',{month:'short',year:'numeric'}),label:'Entrada do cliente',done:true,r:0,c:0,k:0,note:'Cliente criado no pipeline'}]};ensureMetricShape(p);S.projetos.push(p);S.comments[pid]=[];save();closeModal();renderPipeline();});}
 
 function openEditProj(id){
   const p=getP(id);
+  if(!p||!canSeeProject(p))return alert('Esta sessão só pode editar os seus próprios projetos.');
   ensureMetricShape(p);
   openModal(mS('Editar projeto',`
     <div class="form-row"><label class="form-lbl">Nome</label><input class="form-in" id="f-nome" value="${p.nome.replace(/"/g,'&quot;')}"></div>
     <div class="form-row"><label class="form-lbl">Empresa / Cliente</label><input class="form-in" id="f-cli" value="${p.cliente.replace(/"/g,'&quot;')}"></div>
     <div class="form-row"><label class="form-lbl">Países / mercados alvo</label><input class="form-in" id="f-mercados" value="${projectMarkets(p).join(', ').replace(/"/g,'&quot;')}" placeholder="Ex: EAU, Arábia Saudita, Qatar"></div>
     <div class="form-grid">
-      <div class="form-row"><label class="form-lbl">AM</label><select class="form-sel" id="f-am">${S.ams.map(a=>`<option value="${a.id}"${a.id===p.amId?' selected':''}>${a.name}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-lbl">AM</label><select class="form-sel" id="f-am">${amOptions(p.amId)}</select></div>
       <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est">${Object.entries(SLBL).map(([v,l])=>`<option value="${v}"${p.estado===v?' selected':''}>${l}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-lbl">Progresso (%)</label><input class="form-in" id="f-pct" type="number" min="0" max="100" value="${p.pct}"></div>
       <div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month" value="${myToMonthInput(inferStartMY(p))}"></div>
@@ -753,8 +781,8 @@ function openEditProj(id){
   });
 }
 
-function openAddAlert(){openModal(mS('Novo alerta',`<div class="form-row"><label class="form-lbl">Título</label><input class="form-in" id="f-title" placeholder="Descrição do alerta"></div><div class="form-row"><label class="form-lbl">Detalhe</label><textarea class="form-ta" id="f-body" placeholder="Contexto e próximos passos"></textarea></div><div class="form-row"><label class="form-lbl">Tipo</label><select class="form-sel" id="f-tipo"><option value="urg">Urgente</option><option value="warn">Aviso</option><option value="info">Informação</option><option value="ok">OK</option></select></div>`),()=>{const title=(document.getElementById('f-title').value||'').trim();if(!title)return;S.alertas.push({id:S.nextId++,tipo:document.getElementById('f-tipo').value,title,body:(document.getElementById('f-body').value||'').trim(),done:false});save();closeModal();renderAlertas();});}
-function openAddTask(){openModal(mS('Nova tarefa',`<div class="form-row"><label class="form-lbl">Descrição</label><input class="form-in" id="f-label" placeholder="Ex: Reunião com cliente X"></div><div class="form-row"><label class="form-lbl">Responsável / Prazo</label><input class="form-in" id="f-who" placeholder="Ex: Bruno Silva · esta semana"></div>`),()=>{const label=(document.getElementById('f-label').value||'').trim();if(!label)return;S.tarefas.push({id:S.nextId++,label,who:(document.getElementById('f-who').value||'').trim(),done:false});save();closeModal();renderChecklist('check-full');});}
+function openAddAlert(){openModal(mS('Novo alerta',`<div class="form-row"><label class="form-lbl">Título</label><input class="form-in" id="f-title" placeholder="Descrição do alerta"></div><div class="form-row"><label class="form-lbl">Detalhe</label><textarea class="form-ta" id="f-body" placeholder="Contexto e próximos passos"></textarea></div><div class="form-row"><label class="form-lbl">Tipo</label><select class="form-sel" id="f-tipo"><option value="urg">Urgente</option><option value="warn">Aviso</option><option value="info">Informação</option><option value="ok">OK</option></select></div>`),()=>{const title=(document.getElementById('f-title').value||'').trim();if(!title)return;S.alertas.push({id:S.nextId++,tipo:document.getElementById('f-tipo').value,title,body:(document.getElementById('f-body').value||'').trim(),ownerAmId:activeAmId(),done:false});save();closeModal();renderAlertas();});}
+function openAddTask(){openModal(mS('Nova tarefa',`<div class="form-row"><label class="form-lbl">Descrição</label><input class="form-in" id="f-label" placeholder="Ex: Reunião com cliente X"></div><div class="form-row"><label class="form-lbl">Responsável / Prazo</label><input class="form-in" id="f-who" value="${isAdmin()?'':activeAM().name+' · '}" placeholder="Ex: Bruno Silva · esta semana"></div>`),()=>{const label=(document.getElementById('f-label').value||'').trim();if(!label)return;S.tarefas.push({id:S.nextId++,label,who:(document.getElementById('f-who').value||'').trim(),ownerAmId:activeAmId(),done:false});save();closeModal();renderChecklist('check-full');});}
 
 
 const CAL_STORE='maab_cal_v2';
@@ -791,6 +819,8 @@ function calMoveWeek(dir){calBaseMonday=new Date(calBaseMonday.getTime()+dir*7*8
 function calGoToday(){calBaseMonday=calGetMonday(new Date());renderCalendario();}
 
 function calWeekDays(){const days=[];for(let i=0;i<5;i++){const d=new Date(calBaseMonday);d.setDate(d.getDate()+i);days.push(d);}return days;}
+function calMeetingEvents(){return(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId()).map(r=>{const p=getP(r.projetoId)||{};const d=new Date((r.data||new Date().toISOString().slice(0,10))+'T'+(r.hora||'09:00'));return{id:'meet-'+r.id,title:r.titulo||('Follow-up '+(p.cliente||'')),type:r.status==='followup'?'tarefa':'reuniao',ts:d.getTime(),dur:60,generated:true,ownerAmId:r.amId};});}
+function calVisibleEvents(){return[...calEvents.filter(ev=>itemMatchesSession(ev)),...calMeetingEvents()];}
 
 function renderCalendario(){
   const days=calWeekDays();
@@ -818,7 +848,7 @@ function renderCalendario(){
     const dayStart=new Date(d);dayStart.setHours(CAL_HOURS[0],0,0,0);
     const dayEnd=new Date(d);dayEnd.setHours(CAL_HOURS[CAL_HOURS.length-1]+1,0,0,0);
 
-    calEvents.filter(ev=>{const ed=new Date(ev.ts);return ed>=dayStart&&ed<dayEnd;}).forEach(ev=>{
+    calVisibleEvents().filter(ev=>{const ed=new Date(ev.ts);return ed>=dayStart&&ed<dayEnd;}).forEach(ev=>{
       const ed=new Date(ev.ts);
       const top=(ed.getHours()-CAL_HOURS[0])*CAL_SLOT+(ed.getMinutes()/60)*CAL_SLOT;
       const height=Math.max(22,(ev.dur/60)*CAL_SLOT-2);
@@ -826,15 +856,15 @@ function renderCalendario(){
       el.className='cal-event '+(EV_TYPES[ev.type]||'ev-nota');
       el.style.top=top+'px';el.style.height=height+'px';
       el.innerHTML=`${ev.title}<div class="ev-time">${calFmtH(ev.ts)} · ${ev.dur}min</div>`;
-      el.title=`${ev.title} — ${calFmtH(ev.ts)}. Clique para apagar.`;
-      el.onclick=e=>{e.stopPropagation();if(confirm(`Apagar "${ev.title}"?`)){calEvents=calEvents.filter(x=>x.id!==ev.id);calSave();renderCalendario();}};
+      el.title=ev.generated?`${ev.title} — ${calFmtH(ev.ts)}. Criado no controlo de reuniões.`:`${ev.title} — ${calFmtH(ev.ts)}. Clique para apagar.`;
+      el.onclick=e=>{e.stopPropagation();if(ev.generated)return;if(confirm(`Apagar "${ev.title}"?`)){calEvents=calEvents.filter(x=>x.id!==ev.id);calSave();renderCalendario();}};
       col.appendChild(el);
     });
     grid.appendChild(col);
   });
 
   const calCL=document.getElementById('cal-checklist');calCL.innerHTML='';
-  S.tarefas.forEach(t=>{
+  S.tarefas.filter(t=>itemMatchesSession(t)).forEach(t=>{
     const d=document.createElement('div');d.className='cal-check'+(t.done?' done':'');
     d.innerHTML=`<div class="cal-chk">${t.done?'<i class="ti ti-check" style="font-size:9px"></i>':''}</div><div><div class="cal-ch-lbl">${t.label}</div><div class="cal-ch-who">${t.who}</div></div>`;
     d.onclick=()=>{t.done=!t.done;save();renderCalendario();};
@@ -843,7 +873,7 @@ function renderCalendario(){
 
   const calPJ=document.getElementById('cal-projs');calPJ.innerHTML='';
   const PCOL={active:{bg:var_green_bg,col:'#27500A',l:'Em curso'},risco:{bg:var_red_bg,col:'#791F1F',l:'Em risco'},concluido:{bg:'#E1F5EE',col:'#0F6E56',l:'Concluído'}};
-  const upcoming=S.projetos.filter(p=>p.estado==='active'||p.estado==='risco'||p.estado==='inicio').slice(0,8);
+  const upcoming=visibleProjects().filter(p=>p.estado==='active'||p.estado==='risco'||p.estado==='inicio').slice(0,8);
   upcoming.forEach(p=>{
     const am=getAM(p.amId);
     const pc=SCOL[p.estado];
@@ -864,12 +894,13 @@ function calAddEvent(){
   const dur=parseInt(document.getElementById('cal-ev-dur').value);
   const type=document.getElementById('cal-ev-type').value;
   const d=new Date(calBaseMonday);d.setDate(d.getDate()+dayIdx);d.setHours(hour,0,0,0);
-  calEvents.push({id:Date.now(),title,type,ts:d.getTime(),dur});
+  calEvents.push({id:Date.now(),title,type,ts:d.getTime(),dur,ownerAmId:activeAmId()});
   document.getElementById('cal-ev-title').value='';
   calSave();renderCalendario();
 }
 
-renderGM();renderOverview();
+initSessionUI();renderGM();renderOverview();
 </script>
 </body>
 </html>
+
