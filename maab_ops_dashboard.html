@@ -308,6 +308,7 @@ input,select,textarea,button{font-family:var(--font)}
         </div>
         <div class="form-row"><label class="form-lbl">Account Manager</label><select class="form-sel" id="meet-am" onchange="updateMeetingProjects()"></select></div>
         <div class="form-row"><label class="form-lbl">Projeto</label><select class="form-sel" id="meet-project"></select></div>
+        <div class="form-row"><label class="form-lbl">Empresa árabe / contacto no mercado</label><input class="form-in" id="meet-arab-client" placeholder="Ex: Al Noor Trading, Gulf Foods LLC"></div>
         <div class="form-grid">
           <div class="form-row"><label class="form-lbl">Data</label><input class="form-in" id="meet-date" type="date"></div>
           <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="meet-status"><option value="realizada">Realizada</option><option value="followup">Follow-up</option><option value="agendada">Agendada</option><option value="cancelada">Cancelada</option></select></div>
@@ -441,15 +442,16 @@ function monthInputToMY(v){if(!v)return null;const m=String(v).match(/^(\d{4})-(
 function myToMonthInput(my){return my?`${my.y}-${String(my.m+1).padStart(2,'0')}`:'';}
 function inferStartMY(p){const end=parseMY(p.prazo,new Date().getFullYear())||{m:8,y:new Date().getFullYear()};if(p.inicio){const byInput=monthInputToMY(p.inicio);if(byInput)return byInput;const byText=parseMY(p.inicio,end.y);if(byText)return byText;}const first=(p.fases||[]).map(f=>parseMY(f.data,end.y)).find(Boolean);if(first)return first;return{m:0,y:end.y};}
 function projectLabels(p){const maxLen=Math.max(1,p.mensal?.r?.length||0,p.mensal?.c?.length||0,p.mensal?.k?.length||0,p.mensal?.s?.length||0,p.mensal?.labels?.length||0);if(Array.isArray(p.mensal?.labels)&&p.mensal.labels.length>=maxLen)return p.mensal.labels.slice(0,maxLen);const st=inferStartMY(p);const d=new Date(st.y,st.m,1);const arr=[];for(let i=0;i<maxLen;i++){arr.push(fmtMY(d,maxLen<=6));d.setMonth(d.getMonth()+1);}return arr;}
-function ensureMetricShape(p){if(!p.mensal)p.mensal={};const len=Math.max(9,p.mensal.r?.length||0,p.mensal.c?.length||0,p.mensal.k?.length||0,p.mensal.s?.length||0,p.mensal.labels?.length||0);['r','c','k','s','sc'].forEach(k=>{if(!Array.isArray(p.mensal[k]))p.mensal[k]=[];while(p.mensal[k].length<len)p.mensal[k].push(0);});if(!Array.isArray(p.mensal.labels)||p.mensal.labels.length!==len)p.mensal.labels=projectLabels(p);}
+function ensureMetricShape(p){if(!p.mensal)p.mensal={};const len=Math.max(9,p.mensal.r?.length||0,p.mensal.c?.length||0,p.mensal.k?.length||0,p.mensal.s?.length||0,p.mensal.labels?.length||0);['r','c','k','s','sc'].forEach(k=>{if(!Array.isArray(p.mensal[k]))p.mensal[k]=[];while(p.mensal[k].length<len)p.mensal[k].push(0);});if(!Array.isArray(p.mensal.labels)||p.mensal.labels.length!==len)p.mensal.labels=projectLabels(p);p.objMensal=Math.max(0,Number(p.objMensal||0));}
 function periodInputs(p,key,prefix,opts=''){const labels=projectLabels(p);return`<div style="display:grid;grid-template-columns:repeat(${labels.length},minmax(54px,1fr));gap:5px;margin-bottom:12px;overflow-x:auto">${labels.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px;white-space:nowrap">${m}</div><input class="form-in" id="${prefix}-${i}" type="number" ${opts} value="${p.mensal[key][i]||''}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>`;}
 function scoreAvg(p){const vals=(p.mensal?.s||[]).filter(Boolean);return vals.length?Number((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)):0;}
 function projectMonthIndex(p,dateStr){const dt=new Date(dateStr+'T00:00:00');if(isNaN(dt))return-1;const st=inferStartMY(p);return(dt.getFullYear()-st.y)*12+(dt.getMonth()-st.m);}
 function projectMarkets(p){if(Array.isArray(p.mercados)&&p.mercados.length)return p.mercados.filter(Boolean);const txt=[p.nome,p.cliente,p.nota,...(p.fases||[]).flatMap(f=>[f.label,f.note])].join(' ');const defs=[['EAU',/\bEAU\b|emirados/i],['Arábia Saudita',/arabia saudita|saudi/i],['Qatar',/qatar/i],['Kuwait',/kuwait/i],['Omã',/\boma\b|omã/i],['Bahrain',/bahrain/i],['Egipto',/egipto|egypt/i],['MENA',/\bmena\b/i],['GCC',/\bgcc\b/i]];const out=[];defs.forEach(([label,re])=>{if(re.test(txt)&&!out.includes(label))out.push(label);});return out;}
+function projectArabClients(p){const out=[];(p.arabClients||[]).forEach(x=>{if(x&&!out.some(y=>normText(y)===normText(x)))out.push(x);});(S.reunioes||[]).filter(r=>r.projetoId===p.id&&r.arabClient).forEach(r=>{if(!out.some(y=>normText(y)===normText(r.arabClient)))out.push(r.arabClient);});return out;}
 function splitMarkets(v){return String(v||'').split(/[,;|]/).map(x=>x.trim()).filter(Boolean);}
 function phaseMonthIndexes(p,f){const labels=projectLabels(p);const raw=String(f.data||'');const parts=raw.split(/[–-]/).map(x=>parseMY(x, inferStartMY(p).y)).filter(Boolean);let start=parts[0],end=parts[1]||parts[0];if(!start){const i=(p.fases||[]).indexOf(f);return[i>=0&&i<labels.length?i:0];}let a=(start.y-inferStartMY(p).y)*12+(start.m-inferStartMY(p).m),b=(end.y-inferStartMY(p).y)*12+(end.m-inferStartMY(p).m);if(b<a)b=a;const idx=[];for(let i=Math.max(0,a);i<=Math.min(labels.length-1,b);i++)idx.push(i);return idx.length?idx:[Math.max(0,Math.min(labels.length-1,a))];}
 function phaseKPIs(p,f){const idx=phaseMonthIndexes(p,f);const labels=projectLabels(p);const r=idx.reduce((s,i)=>s+(p.mensal.r[i]||0),0);const c=idx.reduce((s,i)=>s+(p.mensal.c[i]||0),0);const scores=idx.map(i=>p.mensal.s[i]||0).filter(Boolean);const score=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'';const period=idx.map(i=>labels[i]).join(', ');return{r,c,score,period};}
-function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0}));let active=rows.filter(x=>x.r||x.c||x.score);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span></div>`).join('');}
+function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0,meetings:projectMonthMeetings(p,i)}));let active=rows.filter(x=>x.r||x.c||x.score||x.meetings.length);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>{const detail=x.meetings.slice(-3).map(r=>`<div style="font-size:11px;color:var(--t2);line-height:1.45;margin-top:4px;background:var(--s2);border-radius:6px;padding:5px 7px"><b>${h(new Date(r.data+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}))}</b>${r.arabClient?` · ${h(r.arabClient)}`:''}${r.score?` · Score ${r.score}/4`:''}<br>${h((r.proximo||r.nota||'').slice(0,150))}${(r.proximo||r.nota||'').length>150?'...':''}</div>`).join('');return`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span></div>${detail}`;}).join('');}
 function updateCommandStatus(){const alerts=S.alertas.filter(a=>itemMatchesSession(a));const openAlerts=alerts.filter(a=>!a.done).length;const overdue=visibleProjects().filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
 function buildSearchIndex(){const hits=[];visibleProjects().forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});visibleAMs().forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${visibleProjects().filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId()).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.filter(a=>itemMatchesSession(a)).forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.filter(t=>itemMatchesSession(t)).forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));if(isAdmin())S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
 function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!terms.length)return[];return buildSearchIndex().filter(x=>terms.every(t=>x.text.toLowerCase().includes(t)||x.title.toLowerCase().includes(t)||x.meta.toLowerCase().includes(t))).slice(0,12);}
@@ -487,6 +489,7 @@ function renderOverview(){
 }
 
 function renderEquipa(){
+  Object.values(CHARTS).forEach(ch=>ch.destroy());Object.keys(CHARTS).forEach(k=>delete CHARTS[k]);
   const el=document.getElementById('equipa-container');el.innerHTML='';
   visibleAMs().forEach(am=>{
     const ps=visibleProjects().filter(p=>p.amId===am.id);
@@ -510,6 +513,7 @@ function buildProjBlock(p,am){
   const block=document.createElement('div');block.className='proj-block';
   const labels=projectLabels(p);
   const markets=projectMarkets(p);
+  const arabClients=projectArabClients(p);
   const totalR=p.mensal.r.reduce((a,b)=>a+b,0);
   const totalC=p.mensal.c.reduce((a,b)=>a+b,0);
   const doneF=p.fases.filter(f=>f.done).length;
@@ -528,6 +532,7 @@ function buildProjBlock(p,am){
       <div class="kpi-chip"><div class="kpi-v">€${(p.revenue/1000).toFixed(1)}k</div><div class="kpi-l">Orçamento est.</div></div>
       <div class="kpi-chip"><div class="kpi-v">${comms.length}</div><div class="kpi-l">Comentários</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${scoreAvg(p)||'—'}</div><div class="kpi-l">Score médio</div></div>
+      <div class="kpi-chip"><div class="kpi-v" style="color:var(--red)">${p.objMensal||'—'}</div><div class="kpi-l">Objetivo mensal</div></div>
     </div>
     <div class="tab-row">
       <button class="tab-btn active" data-tab="chart" data-pid="${p.id}"><i class="ti ti-chart-line" style="font-size:13px"></i>Evolução mensal</button>
@@ -539,12 +544,14 @@ function buildProjBlock(p,am){
         <span class="leg-item"><span style="display:inline-block;width:18px;height:2.5px;background:#378ADD;border-radius:1px"></span>Reuniões</span>
         <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px dashed #BA7517"></span>Pedidos de cotação</span>
         <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px solid #6B55C8"></span>Score médio</span>
+        <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px solid #A32D2D"></span>Objetivo mensal</span>
       </div>
       <div style="font-size:11px;color:var(--t3);margin-bottom:7px">${labels[0]} → ${labels[labels.length-1]}</div>
-      <div style="position:relative;width:100%;height:200px"><canvas id="ch-${p.id}" role="img" aria-label="Gráfico mensal ${p.nome}">Períodos: ${labels.join(', ')}. Reuniões: ${p.mensal.r.join(', ')}. Cotações: ${p.mensal.c.join(', ')}. Score médio: ${p.mensal.s.join(', ')}.</canvas></div>
+      <div style="position:relative;width:100%;height:200px"><canvas id="ch-${p.id}" role="img" aria-label="Gráfico mensal ${p.nome}">Períodos: ${labels.join(', ')}. Reuniões: ${p.mensal.r.join(', ')}. Cotações: ${p.mensal.c.join(', ')}. Score médio: ${p.mensal.s.join(', ')}. Objetivo mensal: ${p.objMensal||0}.</canvas></div>
     </div>
     <div id="tf-${p.id}" class="phases-area" style="display:none">
       <div style="margin-bottom:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:6px">Países / mercados alvo</div><div class="ph-kpis">${markets.length?markets.map(m=>`<span class="ph-kpi"><i class="ti ti-map-pin" style="font-size:11px"></i> ${h(m)}</span>`).join(''):'<span class="ph-kpi">Sem mercados definidos</span>'}</div></div>
+      <div style="margin-bottom:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:6px">Empresas árabes associadas</div><div class="ph-kpis">${arabClients.length?arabClients.map(m=>`<span class="ph-kpi"><i class="ti ti-building-skyscraper" style="font-size:11px"></i> ${h(m)}</span>`).join(''):'<span class="ph-kpi">Sem empresas associadas</span>'}</div></div>
       ${p.fases.map((f,i)=>{const isL=i===p.fases.length-1;const dc=f.done?SCOL[p.estado]:'var(--b2)';const lc=f.done?SCOL[p.estado]+'44':'var(--border)';return`<div class="ph-item"><div class="ph-left"><div class="ph-dot" style="background:${dc};border:${f.done?'none':'1.5px solid var(--b2)'}"></div>${!isL?`<div class="ph-line" style="background:${lc}"></div>`:''}</div><div class="ph-right"><div class="ph-date">${f.data}</div><div class="ph-name" style="color:${f.done?'var(--text)':'var(--t3)'}">${f.label}${f.done?` <i class="ti ti-check" style="font-size:12px;color:var(--green)"></i>`:''}</div><div class="ph-note">${f.note}</div>${phaseMonthRows(p,f)}</div></div>`;}).join('')}
     </div>
     <div id="tm-${p.id}" style="display:none">
@@ -567,7 +574,7 @@ function buildProjBlock(p,am){
     const open=detail.classList.toggle('open');
     const chev=document.getElementById(`pc-${p.id}`);
     if(chev)chev.style.transform=open?'rotate(180deg)':'rotate(0deg)';
-    if(open)setTimeout(()=>initChartScore2(p),80);
+    if(open)scheduleChartRender(p);
   };
 
   detail.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -578,7 +585,7 @@ function buildProjBlock(p,am){
       document.getElementById(`tc-${pid}`).style.display=tab==='chart'?'block':'none';
       document.getElementById(`tf-${pid}`).style.display=tab==='fases'?'block':'none';
       document.getElementById(`tm-${pid}`).style.display=tab==='comms'?'block':'none';
-      if(tab==='chart')initChartScore2(p);
+      if(tab==='chart')scheduleChartRender(p);
     };
   });
 
@@ -591,7 +598,8 @@ function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div clas
 
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
 
-function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:projectLabels(p),datasets:[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
+function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;const labels=projectLabels(p);const datasets=[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}];if(p.objMensal>0)datasets.push({label:'Objetivo mensal',data:labels.map(()=>p.objMensal),yAxisID:'y',borderColor:'#A32D2D',borderDash:[8,4],backgroundColor:'transparent',tension:0,fill:false,borderWidth:2,pointRadius:0});CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
+window.addEventListener('resize',()=>Object.values(CHARTS).forEach(ch=>ch.resize()));
 function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);const p=getP(pid);if(!ta||!sel||!p||!canSeeProject(p))return;const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];const author=isAdmin()?{name:'Gestor',init:'GM',color:'#E6F1FB',tc:'#185FA5'}:{name:activeAM().name,init:activeAM().init,color:activeAM().color,tc:activeAM().tc};S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:author.name,authorInit:author.init,authorColor:author.color,authorTc:author.tc,type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
 function togglePin(cid,pid){const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.pinned=!c.pinned;save();renderEquipa();}}
 function delComm(cid,pid){if(!confirm('Apagar comentário?'))return;const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.deleted=true;save();renderEquipa();}}
@@ -643,6 +651,15 @@ function updateMeetingProjects(){
   if(prev&&[...sel.options].some(o=>o.value===prev))sel.value=prev;
 }
 function normText(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function textTokens(v){return normText(v).split(/[^a-z0-9]+/).filter(x=>x.length>2);}
+function projectMatchScore(raw,p){const n=normText(raw);const fields=[p.nome,p.cliente,...projectMarkets(p)].map(normText).filter(Boolean);let score=0;fields.forEach(f=>{if(f&&n.includes(f))score+=8;});textTokens(p.nome+' '+p.cliente).forEach(t=>{if(n.includes(t))score++;});return score;}
+function findMeetingProject(raw,scope){const candidates=(scope&&scope.length?scope:visibleProjects()).map(p=>({p,score:projectMatchScore(raw,p)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);return candidates[0]?.p||null;}
+function extractArabClient(raw){const text=String(raw||'');const patterns=[/(?:empresa|cliente|comprador|distribuidor|importador|parceiro)\s+(?:árabe|arabe|local|gcc|mena)?\s*[:\-–]\s*([^.\n;]+)/i,/(?:com|reuniu com|meeting with)\s+([A-ZÀ-Ú0-9][^.\n;]{2,60}(?:LLC|L\.L\.C|Trading|Foods|Group|FZE|FZCO|Co\.?|Company|Est\.?)?)/i];for(const re of patterns){const m=text.match(re);if(m&&m[1])return m[1].trim().replace(/\s+/g,' ');}return '';}
+function addBusinessDays(dateStr,days){const d=new Date((dateStr||new Date().toISOString().slice(0,10))+'T09:00:00');let left=days;while(left>0){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)left--;}return d;}
+function ensureFollowupReminder(meeting,p,am){const baseId='fu-'+meeting.id;if(calEvents.some(ev=>ev.id===baseId))return;const d=addBusinessDays(meeting.data,5);const who=meeting.arabClient?` com ${meeting.arabClient}`:'';calEvents.push({id:baseId,title:`Follow-up${who} · ${p.cliente}`,type:'tarefa',ts:d.getTime(),dur:30,ownerAmId:am.id,meetingId:meeting.id,projectId:p.id,note:meeting.proximo||meeting.nota||''});calSave();}
+function projectMonthMeetings(p,idx){return(S.reunioes||[]).filter(r=>r.projetoId===p.id&&projectMonthIndex(p,r.data)===idx).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));}
+function destroyChart(pid){const cid='ch-'+pid;if(CHARTS[cid]){CHARTS[cid].destroy();delete CHARTS[cid];}}
+function scheduleChartRender(p,attempt=0){const canvas=document.getElementById('ch-'+p.id);if(!canvas)return;const box=canvas.parentElement;if(!box||box.offsetWidth<40){if(attempt<8)setTimeout(()=>scheduleChartRender(p,attempt+1),80);return;}destroyChart(p.id);initChartScore2(p);requestAnimationFrame(()=>{if(CHARTS['ch-'+p.id])CHARTS['ch-'+p.id].resize();});}
 function parseDateFromText(text){
   const raw=String(text||'');
   const m=raw.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
@@ -657,15 +674,16 @@ function parseMeetingText(){
   const n=normText(raw);
   const am=S.ams.find(a=>n.includes(normText(a.name))||n.includes(normText(a.init)));
   if(am){document.getElementById('meet-am').value=am.id;updateMeetingProjects();}
-  const scope=am?S.projetos.filter(p=>p.amId===am.id):S.projetos;
-  const proj=scope.find(p=>n.includes(normText(p.nome))||n.includes(normText(p.cliente)))||S.projetos.find(p=>n.includes(normText(p.nome))||n.includes(normText(p.cliente)));
+  const scope=am?visibleProjects().filter(p=>p.amId===am.id):visibleProjects();
+  const proj=findMeetingProject(raw,scope)||findMeetingProject(raw,visibleProjects());
   if(proj){if(!am){document.getElementById('meet-am').value=proj.amId;updateMeetingProjects();}document.getElementById('meet-project').value=proj.id;}
+  const arabClient=extractArabClient(raw);if(arabClient)document.getElementById('meet-arab-client').value=arabClient;
   const date=parseDateFromText(raw);if(date)document.getElementById('meet-date').value=date;
   let status='realizada';
   if(n.includes('cancelad'))status='cancelada';else if(n.includes('follow')||n.includes('seguimento')||n.includes('proximo passo'))status='followup';else if(n.includes('agendad')||n.includes('marcad'))status='agendada';
   document.getElementById('meet-status').value=status;
   document.getElementById('meet-note').value=raw;
-  const detected=[am?`AM: ${am.name}`:'AM: por confirmar',proj?`Projeto: ${proj.nome}`:'Projeto: por confirmar',date?`Data: ${date}`:'Data: hoje/por confirmar',`Estado: ${MST[status].l}`];
+  const detected=[am?`AM: ${am.name}`:'AM: por confirmar',proj?`Projeto: ${proj.nome}`:'Projeto: por confirmar',arabClient?`Empresa árabe: ${arabClient}`:'Empresa árabe: por confirmar',date?`Data: ${date}`:'Data: hoje/por confirmar',`Estado: ${MST[status].l}`];
   document.getElementById('meet-detect').textContent=detected.join(' · ');
 }
 function renderReunioes(){
@@ -682,7 +700,7 @@ function renderReunioes(){
   document.getElementById('meet-metrics').innerHTML=`<div class="mc"><div class="mc-l">Registos</div><div class="mc-v">${total}</div></div><div class="mc"><div class="mc-l">Realizadas</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Follow-up</div><div class="mc-v" style="color:var(--amber)">${follow}</div></div><div class="mc"><div class="mc-l">Agendadas</div><div class="mc-v" style="color:var(--blue)">${planned}</div></div>`;
   const feed=document.getElementById('meet-body');feed.innerHTML='';
   if(!meetings.length){feed.innerHTML='<div class="card" style="text-align:center;color:var(--t3);font-size:13px">Sem registos de reunião neste filtro.</div>';return;}
-  meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}${r.score?' · Score '+r.score+'/4':''}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto e na pasta do AM</div></div>`;feed.appendChild(c);});
+  meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const arab=r.arabClient?` · ${h(r.arabClient)}`:'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}${arab}${r.score?' · Score '+r.score+'/4':''}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto, fases/KPIs e calendário de follow-up</div></div>`;feed.appendChild(c);});
 }
 function saveMeetingNote(){
   const amId=isAdmin()?parseInt(document.getElementById('meet-am').value):activeAmId(),projectId=parseInt(document.getElementById('meet-project').value);
@@ -690,18 +708,21 @@ function saveMeetingNote(){
   if(!isAdmin()&&(!p||p.amId!==activeAmId()))return alert('Esta sessão só pode registar reuniões nos seus próprios projetos.');
   if(!amId||!p||!note)return alert('Escolha o AM, o projeto e escreva a informação da reunião.');
   const date=document.getElementById('meet-date').value||new Date().toISOString().slice(0,10),status=document.getElementById('meet-status').value,score=parseInt(document.getElementById('meet-score').value)||0;
+  const arabClient=(document.getElementById('meet-arab-client').value||'').trim();
   const stamp=new Date(date+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});
-  const title=`Reunião · ${p.cliente}`;
-  const full=`${stamp} · ${p.nome}${score?` · Score ${score}/4`:''}\n${note}`;
-  const rec={id:S.nextId++,data:date,hora:'',titulo:title,projetoId:projectId,amId,status,nota:note,proximo:note,score};
+  const title=`Reunião · ${p.cliente}${arabClient?' · '+arabClient:''}`;
+  const full=`${stamp} · ${p.nome}${arabClient?` · Empresa árabe: ${arabClient}`:''}${score?` · Score ${score}/4`:''}\n${note}`;
+  const rec={id:S.nextId++,data:date,hora:'',titulo:title,projetoId:projectId,amId,status,nota:note,proximo:note,score,arabClient};
   S.reunioes.unshift(rec);
   if(!S.comments[projectId])S.comments[projectId]=[];
-  S.comments[projectId].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid:projectId,author:am.name,authorInit:am.init,authorColor:am.color,authorTc:am.tc,type:'reuniao',text:note,pinned:false,ts:Date.now(),deleted:false});
+  S.comments[projectId].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid:projectId,author:am.name,authorInit:am.init,authorColor:am.color,authorTc:am.tc,type:'reuniao',text:arabClient?`Empresa árabe: ${arabClient}\n${note}`:note,pinned:false,ts:Date.now(),deleted:false});
   p.nota=[full,p.nota].filter(Boolean).join('\n\n');
+  if(arabClient){if(!Array.isArray(p.arabClients))p.arabClients=[];if(!p.arabClients.some(x=>normText(x)===normText(arabClient)))p.arabClients.push(arabClient);}
   am.nota=[full,am.nota].filter(Boolean).join('\n\n');
   ensureMetricShape(p);let mIdx=projectMonthIndex(p,date);if(mIdx>=p.mensal.r.length){while(p.mensal.r.length<=mIdx){p.mensal.r.push(0);p.mensal.c.push(0);p.mensal.k.push(0);p.mensal.s.push(0);p.mensal.sc.push(0);}p.mensal.labels=projectLabels(p);}if(mIdx>=0&&mIdx<p.mensal.r.length){p.mensal.r[mIdx]=(p.mensal.r[mIdx]||0)+1;if(score>=1&&score<=4){const count=p.mensal.sc[mIdx]||0;p.mensal.s[mIdx]=Number((((p.mensal.s[mIdx]||0)*count+score)/(count+1)).toFixed(1));p.mensal.sc[mIdx]=count+1;}}
-  document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-detect').textContent='';document.getElementById('meet-score').value='';
-  if(CHARTS['ch-'+p.id]){CHARTS['ch-'+p.id].destroy();delete CHARTS['ch-'+p.id];}
+  ensureFollowupReminder(rec,p,am);
+  document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-arab-client').value='';document.getElementById('meet-detect').textContent='';document.getElementById('meet-score').value='';
+  destroyChart(p.id);
   save();renderReunioes();
 }
 
@@ -750,6 +771,7 @@ function openEditProj(id){
       <div class="form-row"><label class="form-lbl">AM</label><select class="form-sel" id="f-am">${amOptions(p.amId)}</select></div>
       <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="f-est">${Object.entries(SLBL).map(([v,l])=>`<option value="${v}"${p.estado===v?' selected':''}>${l}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-lbl">Progresso (%)</label><input class="form-in" id="f-pct" type="number" min="0" max="100" value="${p.pct}"></div>
+      <div class="form-row"><label class="form-lbl">Objetivo mensal (linha)</label><input class="form-in" id="f-obj" type="number" min="0" step="1" value="${p.objMensal||''}" placeholder="Ex: 3 reuniões/mês"></div>
       <div class="form-row"><label class="form-lbl">Início do projeto</label><input class="form-in" id="f-inicio" type="month" value="${myToMonthInput(inferStartMY(p))}"></div>
       <div class="form-row"><label class="form-lbl">Prazo</label><input class="form-in" id="f-prazo" value="${p.prazo}"></div>
       <div class="form-row"><label class="form-lbl">Revenue est. (€)</label><input class="form-in" id="f-rev" type="number" min="0" value="${p.revenue}"></div>
@@ -770,13 +792,14 @@ function openEditProj(id){
     p.amId=parseInt(document.getElementById('f-am').value);
     p.estado=document.getElementById('f-est').value;
     p.pct=Math.min(100,Math.max(0,parseInt(document.getElementById('f-pct').value)||0));
+    p.objMensal=Math.max(0,parseFloat(document.getElementById('f-obj').value)||0);
     p.inicio=document.getElementById('f-inicio').value||p.inicio||myToMonthInput(inferStartMY(p));delete p.mensal.labels;
     p.prazo=(document.getElementById('f-prazo').value||'').trim()||p.prazo;
     p.revenue=parseInt(document.getElementById('f-rev').value)||0;
     p.nota=document.getElementById('f-nota').value.trim();
     p.feedbackFinal=document.getElementById('f-feedback').value.trim();
     const len=projectLabels(p).length;for(let i=0;i<len;i++){p.mensal.r[i]=parseInt(document.getElementById(`fr-${i}`).value)||0;p.mensal.c[i]=parseInt(document.getElementById(`fc-${i}`).value)||0;p.mensal.s[i]=Math.min(4,Math.max(0,parseFloat(document.getElementById(`fs-${i}`).value)||0));p.mensal.sc[i]=p.mensal.s[i]?Math.max(1,p.mensal.sc[i]||1):0;}p.mensal.labels=projectLabels(p);
-    if(CHARTS['ch-'+p.id]){CHARTS['ch-'+p.id].destroy();delete CHARTS['ch-'+p.id];}
+    destroyChart(p.id);
     save();closeModal();renderView(VIEW);
   });
 }
@@ -903,4 +926,6 @@ initSessionUI();renderGM();renderOverview();
 </script>
 </body>
 </html>
+
+
 
