@@ -16,6 +16,7 @@ html{background:var(--bg);min-height:100vh}
 body{font-family:var(--font);color:var(--text);font-size:14px;background:var(--bg)}
 body.auth-locked .app{display:none}
 input,select,textarea,button{font-family:var(--font)}
+select option{background:var(--surface);color:var(--text)}
 .app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
 .sb{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
 .main{padding:20px 28px 60px;overflow-y:auto;background:var(--bg)}
@@ -38,6 +39,8 @@ input,select,textarea,button{font-family:var(--font)}
 .btn{font-size:12px;padding:6px 13px;border-radius:8px;border:1px solid var(--b2);background:var(--surface);color:var(--t2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
 .btn:hover{background:var(--s2);color:var(--text)}
 .btn-p{background:var(--text);color:#fff;border-color:var(--text)}.btn-p:hover{opacity:.88;color:#fff}
+body[data-theme="dark"] .btn-p{background:#f5f2ed;color:#151718;border-color:#f5f2ed}
+body[data-theme="dark"] .btn-p:hover{color:#151718}
 .btn-d{color:var(--red)}.btn-d:hover{background:var(--red-bg)}
 .btn-sm{padding:4px 9px;font-size:11px;border-radius:6px}
 .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px}
@@ -77,7 +80,8 @@ input,select,textarea,button{font-family:var(--font)}
 .session-box i{font-size:14px;color:var(--t3)}
 .session-select{border:none;background:transparent;color:var(--text);font-size:12px;outline:none;max-width:190px}
 .session-chip{font-size:11px;color:var(--t3);white-space:nowrap}
-.icon-btn{height:32px;border:1px solid var(--border);background:var(--surface);border-radius:9px;color:var(--t2);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 10px;font-size:12px;white-space:nowrap}
+.icon-btn{min-width:34px;height:32px;border:1px solid var(--border);background:var(--surface);border-radius:9px;color:var(--t2);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 10px;font-size:12px;white-space:nowrap}
+.theme-btn{width:34px;padding:0}
 .icon-btn:hover{background:var(--s2);color:var(--text)}
 .icon-btn i{font-size:14px}
 .login-ov{position:fixed;inset:0;z-index:500;background:var(--bg);display:none;align-items:center;justify-content:center;padding:22px}
@@ -295,7 +299,7 @@ body.auth-locked .login-ov{display:flex}
       <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
       <input class="hidden-file" type="file" id="import-file" accept="application/json" onchange="importData(event)">
     </div>
-    <button class="icon-btn" onclick="toggleTheme()" title="Alternar modo claro/escuro"><i class="ti ti-moon" id="theme-ic"></i><span id="theme-lbl">Escuro</span></button>
+    <button class="icon-btn theme-btn" onclick="toggleTheme()" title="Alternar modo claro/escuro"><i class="ti ti-moon" id="theme-ic"></i></button>
     <button class="icon-btn" id="users-btn" onclick="openUserSettings()" title="Gerir acessos"><i class="ti ti-users-cog"></i><span>Acessos</span></button>
     <div class="session-box">
       <i class="ti ti-user-shield"></i>
@@ -480,7 +484,7 @@ function calendarItemMatchesSession(item){if(isAuthAdmin())return true;if(item.o
 function defaultUserConfig(){const cfg={admin:{email:'admin@maab.pt',pass:'maab2026'},ams:{}};S.ams.forEach(a=>cfg.ams[a.id]={email:normText(a.name).split(/\s+/).filter(Boolean).slice(0,2).join('.')+'@maab.pt',pass:'maab2026'});return cfg;}
 function getUserConfig(){const d=defaultUserConfig();let saved={};try{saved=JSON.parse(localStorage.getItem(USER_STORE)||'{}')||{};}catch(e){}const cfg={admin:{...d.admin,...(saved.admin||{})},ams:{...d.ams}};Object.keys(saved.ams||{}).forEach(id=>cfg.ams[id]={...(cfg.ams[id]||{}),...saved.ams[id]});return cfg;}
 function authUsers(){const cfg=getUserConfig();return[{email:cfg.admin.email,pass:cfg.admin.pass,role:'admin',session:'admin',name:'Administrador'},...S.ams.map(a=>({email:(cfg.ams[a.id]||{}).email,pass:(cfg.ams[a.id]||{}).pass,role:'am',session:'am:'+a.id,name:a.name,amId:a.id}))];}
-function applyTheme(){let t='light';try{t=localStorage.getItem(THEME_STORE)||'light';}catch(e){}document.body.dataset.theme=t;const ic=document.getElementById('theme-ic');if(ic)ic.className=t==='dark'?'ti ti-sun':'ti ti-moon';const lbl=document.getElementById('theme-lbl');if(lbl)lbl.textContent=t==='dark'?'Claro':'Escuro';}
+function applyTheme(){let t='light';try{t=localStorage.getItem(THEME_STORE)||'light';}catch(e){}document.body.dataset.theme=t;const ic=document.getElementById('theme-ic');if(ic)ic.className=t==='dark'?'ti ti-sun':'ti ti-moon';}
 function toggleTheme(){const next=document.body.dataset.theme==='dark'?'light':'dark';document.body.dataset.theme=next;try{localStorage.setItem(THEME_STORE,next);}catch(e){}applyTheme();}
 function loginUser(){const email=normText(document.getElementById('login-email').value).trim(),pass=document.getElementById('login-pass').value;const u=authUsers().find(x=>normText(x.email)===email&&x.pass===pass);const err=document.getElementById('login-error');if(!u){if(err)err.classList.add('show');return;}AUTH={email:u.email,role:u.role,session:u.session,name:u.name,amId:u.amId||null};try{localStorage.setItem(AUTH_STORE,JSON.stringify(AUTH));}catch(e){}SESSION=u.session;try{localStorage.setItem(SESSION_STORE,SESSION);}catch(e){}document.body.classList.remove('auth-locked');if(err)err.classList.remove('show');initSessionUI();renderView(VIEW);}
 function logoutUser(){AUTH=null;try{localStorage.removeItem(AUTH_STORE);localStorage.removeItem(SESSION_STORE);}catch(e){}SESSION='admin';document.body.classList.add('auth-locked');const p=document.getElementById('login-pass');if(p)p.value='';}
