@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#f8f7f4;--surface:#fff;--s2:#f2f1ee;--border:#e4e2dd;--b2:#ccc;--text:#1a1917;--t2:#6b6a67;--t3:#a09e9a;--blue:#185FA5;--blue-bg:#E6F1FB;--blue-lt:#B5D4F4;--green:#2d7a3a;--green-bg:#EAF3DE;--amber:#854F0B;--amber-bg:#FAEEDA;--red:#A32D2D;--red-bg:#FCEBEB;--gray-bg:#F1EFE8;--gray-t:#5F5E5A;--r:10px;--rl:14px;--font:'DM Sans',system-ui,sans-serif}
 body[data-theme="dark"]{--bg:#151718;--surface:#202326;--s2:#2a2e31;--border:#3a4045;--b2:#555d64;--text:#f5f2ed;--t2:#d0cbc3;--t3:#9f988f;--blue:#8ec7ff;--blue-bg:#16304a;--blue-lt:#3c78b8;--green:#94d47d;--green-bg:#203c25;--amber:#f0bf69;--amber-bg:#493315;--red:#ff9c9c;--red-bg:#4a2020;--gray-bg:#303438;--gray-t:#d4cec6}
@@ -297,7 +298,7 @@ body.auth-locked .login-ov{display:flex}
       <button class="btn" onclick="openMonthlyReport()"><i class="ti ti-file-spreadsheet"></i>Relatório mensal</button>
       <button class="btn" onclick="exportData()"><i class="ti ti-download"></i>Backup</button>
       <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
-      <input class="hidden-file" type="file" id="import-file" accept="application/json" onchange="importData(event)">
+      <input class="hidden-file" type="file" id="import-file" accept=".json,.xls,.xlsx,.csv,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" onchange="importData(event)">
     </div>
     <button class="icon-btn theme-btn" onclick="toggleTheme()" title="Alternar modo claro/escuro"><i class="ti ti-moon" id="theme-ic"></i></button>
     <button class="icon-btn" id="users-btn" onclick="openUserSettings()" title="Gerir acessos"><i class="ti ti-users-cog"></i><span>Acessos</span></button>
@@ -568,7 +569,51 @@ function exportMonthlyReport(month){
   completed.forEach(p=>{const labels=projectLabels(p);doneRows.push([p.cliente,p.nome,getAM(p.amId).name,`${labels[0]} → ${labels[labels.length-1]}`,p.mensal.r.reduce((a,b)=>a+b,0),p.mensal.c.reduce((a,b)=>a+b,0),scoreAvg(p)||'',scoreCollectionRate(p)+'%',p.feedbackFinal||p.nota||'']);});
   downloadXls(`maab-relatorio-${month}.xls`,[xlsSheet('Resumo',summary),xlsSheet('Account Managers',amRows),xlsSheet('Projetos',projRows),xlsSheet('Reunioes',meetRows),xlsSheet('Follow-ups',fuRows),xlsSheet('Concluidos',doneRows)]);
 }
-function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
+function findAmByName(name){const n=normText(name);return S.ams.find(a=>normText(a.name)===n)||S.ams.find(a=>n&&normText(a.name).includes(n));}
+function findProjectByNames(project,client){const pn=normText(project),cn=normText(client);return S.projetos.find(p=>(pn&&normText(p.nome)===pn)||(cn&&normText(p.cliente)===cn&&(!pn||normText(p.nome).includes(pn)||pn.includes(normText(p.nome)))));}
+function parsePercent(v){const n=parseFloat(String(v||'').replace('%','').replace(',','.'));return isNaN(n)?0:n;}
+function importJsonPayload(text){const payload=JSON.parse(text);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();return'Backup JSON importado com sucesso.';}
+function sheetRows(wb,name){const s=wb.Sheets[name];return s?XLSX.utils.sheet_to_json(s,{defval:''}):[];}
+function importExcelWorkbook(wb){
+  if(!window.XLSX)throw new Error('Leitor Excel indisponivel');
+  let updated=0,created=0,meetingsAdded=0,followupsAdded=0;
+  sheetRows(wb,'Projetos').forEach(r=>{
+    const cliente=r['Cliente']||'',nome=r['Projeto']||'',am=findAmByName(r['AM']);
+    if(!cliente&&!nome)return;
+    let p=findProjectByNames(nome,cliente);
+    if(!p){p={id:S.nextId++,nome:nome||('Projeto - '+cliente),cliente,amId:am?.id||activeAmId()||S.ams[0]?.id||1,estado:'inicio',pct:0,prazo:'—',revenue:0,nota:'',feedbackFinal:'',mensal:{r:[0,0,0,0,0,0,0,0,0],c:[0,0,0,0,0,0,0,0,0],k:[0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0],sc:[0,0,0,0,0,0,0,0,0]},fases:[]};S.projetos.push(p);S.comments[p.id]=[];created++;}
+    if(am)p.amId=am.id;
+    if(r['Estado']){const e=Object.entries(SLBL).find(([,l])=>normText(l)===normText(r['Estado']));if(e)p.estado=e[0];}
+    if(r['Progresso %']!=='')p.pct=Math.max(0,Math.min(100,parsePercent(r['Progresso %'])));
+    if(r['Mercados'])p.mercados=splitMarkets(r['Mercados']);
+    if(r['Empresas árabes'])p.arabClients=splitMarkets(r['Empresas árabes']);
+    if(r['Objetivo mensal']!=='')p.objMensal=Math.max(0,Number(r['Objetivo mensal'])||0);
+    if(r['Feedback final'])p.feedbackFinal=String(r['Feedback final']);
+    ensureMetricShape(p);updated++;
+  });
+  sheetRows(wb,'Reunioes').concat(sheetRows(wb,'Reuniões')).forEach(r=>{
+    const p=findProjectByNames(r['Projeto'],r['Cliente']);const am=findAmByName(r['AM'])||getAM(p?.amId);const data=String(r['Data']||'').slice(0,10);if(!p||!data)return;
+    const exists=(S.reunioes||[]).some(m=>m.projetoId===p.id&&m.data===data&&normText(m.arabClient)===normText(r['Empresa árabe'])&&normText(m.nota||m.proximo)===normText(r['Nota / informação']||r['Próximo passo']));
+    if(exists)return;
+    const scoreText=String(r['Score']||'');const sm=scoreText.match(/[1-4]/);const score=sm?parseInt(sm[0]):0;
+    S.reunioes.unshift({id:S.nextId++,data,hora:r['Hora']||'',titulo:`Reunião · ${p.cliente}${r['Empresa árabe']?' · '+r['Empresa árabe']:''}`,projetoId:p.id,amId:am?.id||p.amId,status:'realizada',arabClient:r['Empresa árabe']||'',nota:r['Nota / informação']||'',proximo:r['Próximo passo']||r['Nota / informação']||'',score});
+    if(r['Empresa árabe']){if(!Array.isArray(p.arabClients))p.arabClients=[];if(!p.arabClients.some(x=>normText(x)===normText(r['Empresa árabe'])))p.arabClients.push(r['Empresa árabe']);}
+    meetingsAdded++;
+  });
+  sheetRows(wb,'Follow-ups').forEach(r=>{
+    const p=findProjectByNames(r['Projeto'],r['Cliente']);const am=findAmByName(r['AM'])||getAM(p?.amId);const data=String(r['Data']||'').slice(0,10);if(!p||!data)return;
+    const ts=new Date(data+'T'+(r['Hora']||'09:00')).getTime();if(isNaN(ts))return;
+    const exists=calEvents.some(ev=>ev.projectId===p.id&&ev.ts===ts&&normText(ev.note||ev.title)===normText(r['Nota']));
+    if(exists)return;
+    const st=Object.entries(FST).find(([,v])=>normText(v.l)===normText(r['Estado follow-up']))?.[0]||'aberto';
+    calEvents.push({id:'fu-xls-'+Date.now()+'-'+followupsAdded,title:`Follow-up · ${p.cliente}`,type:st==='novareuniao'?'reuniao':'tarefa',ts,dur:30,ownerAmId:am?.id||p.amId,projectId:p.id,note:r['Nota']||'',followStatus:st});
+    followupsAdded++;
+  });
+  S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});
+  calSave();save();renderView(VIEW);updateCommandStatus();
+  return`Excel lido. Projetos atualizados: ${updated}. Novos projetos: ${created}. Reuniões adicionadas: ${meetingsAdded}. Follow-ups adicionados: ${followupsAdded}.`;
+}
+function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const ext=(file.name.split('.').pop()||'').toLowerCase();if(ext==='json'){const reader=new FileReader();reader.onload=()=>{try{alert(importJsonPayload(reader.result));}catch(e){alert('Não foi possível importar este backup JSON.');}};reader.readAsText(file);return;}const reader=new FileReader();reader.onload=()=>{try{if(!window.XLSX)throw new Error('Biblioteca Excel não carregada.');const wb=XLSX.read(reader.result,{type:'array'});alert(importExcelWorkbook(wb));}catch(e){alert('Não foi possível ler este Excel. Confirma que é um relatório mensal exportado pela plataforma.');}};reader.readAsArrayBuffer(file);}
 
 let VIEW='overview';
 document.querySelectorAll('.ni').forEach(b=>b.addEventListener('click',()=>{let v=b.dataset.view;if(!isAdmin()&&(v==='mercados'||v==='notas'))v='overview';const btn=document.querySelector(`[data-view="${v}"]`);document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');VIEW=v;renderView(v);}));
