@@ -205,7 +205,14 @@ input,select,textarea,button{font-family:var(--font)}
 .ev-alerta{background:var(--red-bg);color:#791F1F;border-color:var(--red)}
 .ev-prazo{background:var(--amber-bg);color:#633806;border-color:var(--amber)}
 .ev-nota{background:var(--gray-bg);color:#444441;border-color:var(--gray-t)}
+.ev-feito{opacity:.55;text-decoration:line-through}.ev-adiado{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}.ev-semresposta{border-color:var(--red);background:var(--red-bg);color:var(--red)}.ev-novareuniao{border-color:var(--green);background:var(--green-bg);color:var(--green)}
 .ev-time{font-size:10px;font-weight:400;opacity:.8;margin-top:1px}
+.am-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.am-dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
+.am-dash-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.am-dash-row{font-size:12px;color:var(--t2);line-height:1.45;padding:6px 0;border-bottom:1px solid var(--border)}
+.am-dash-row:last-child{border-bottom:none}
+.am-dash-empty{font-size:12px;color:var(--t3);padding:6px 0}
 .cal-bottom{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 .cal-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
 .cal-side-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:9px;display:flex;align-items:center;gap:5px}
@@ -258,7 +265,8 @@ input,select,textarea,button{font-family:var(--font)}
     </div>
     <div class="cmd-actions">
       <button class="btn" onclick="openSearchResults()"><i class="ti ti-list-search"></i>Resultados</button>
-      <button class="btn" onclick="exportData()"><i class="ti ti-download"></i>Exportar</button>
+      <button class="btn" onclick="openMonthlyReport()"><i class="ti ti-file-spreadsheet"></i>Relatório mensal</button>
+      <button class="btn" onclick="exportData()"><i class="ti ti-download"></i>Backup</button>
       <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
       <input class="hidden-file" type="file" id="import-file" accept="application/json" onchange="importData(event)">
     </div>
@@ -272,6 +280,7 @@ input,select,textarea,button{font-family:var(--font)}
   <div class="view active" id="view-overview">
     <div class="topbar"><div><div class="ptitle">Visão geral</div><div class="psub" id="today-lbl"></div></div></div>
     <div class="metrics" id="gm"></div>
+    <div id="am-dashboard" class="am-dash" style="display:none"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-users" style="font-size:14px;color:var(--t3)"></i>Equipa</div><div id="ov-team"></div></div>
       <div><div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-bell" style="font-size:14px;color:var(--t3)"></i>Alertas abertos</div><div id="ov-alerts"></div></div>
@@ -312,7 +321,7 @@ input,select,textarea,button{font-family:var(--font)}
         <div class="form-grid">
           <div class="form-row"><label class="form-lbl">Data</label><input class="form-in" id="meet-date" type="date"></div>
           <div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="meet-status"><option value="realizada">Realizada</option><option value="followup">Follow-up</option><option value="agendada">Agendada</option><option value="cancelada">Cancelada</option></select></div>
-          <div class="form-row"><label class="form-lbl">Score cliente (1-4)</label><select class="form-sel" id="meet-score"><option value="">Sem score</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+          <div class="form-row"><label class="form-lbl">Score cliente (0-4)</label><select class="form-sel" id="meet-score"><option value="0">0 · Não recolhido</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
         </div>
         <div class="form-row"><label class="form-lbl">Informação da reunião</label><textarea class="form-ta" id="meet-note" style="min-height:150px" placeholder="Escreva decisões, pontos discutidos, próximos passos e bloqueios..."></textarea></div>
         <button class="btn btn-p" onclick="saveMeetingNote()"><i class="ti ti-send"></i>Guardar e sincronizar</button>
@@ -359,7 +368,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="cal-add-title"><i class="ti ti-plus" style="font-size:14px;color:var(--t3)"></i>Adicionar evento</div>
       <div class="cal-add-row">
         <div><div class="cal-add-lbl">Descrição</div><input class="cal-in" id="cal-ev-title" placeholder="Ex: Reunião com cliente" style="width:180px"></div>
-        <div><div class="cal-add-lbl">Dia</div><select class="cal-in" id="cal-ev-day"><option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option><option value="3">Quinta</option><option value="4">Sexta</option></select></div>
+        <div><div class="cal-add-lbl">Data</div><input class="cal-in" id="cal-ev-date" type="date"></div>
         <div><div class="cal-add-lbl">Hora</div><select class="cal-in" id="cal-ev-hour"><option value="8">08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option></select></div>
         <div><div class="cal-add-lbl">Duração</div><select class="cal-in" id="cal-ev-dur"><option value="30">30 min</option><option value="60" selected>1h</option><option value="90">1h30</option><option value="120">2h</option></select></div>
         <div><div class="cal-add-lbl">Tipo</div><select class="cal-in" id="cal-ev-type"><option value="reuniao">Reunião</option><option value="tarefa">Tarefa</option><option value="alerta">Alerta</option><option value="prazo">Prazo</option><option value="nota">Nota</option></select></div>
@@ -445,19 +454,71 @@ function projectLabels(p){const maxLen=Math.max(1,p.mensal?.r?.length||0,p.mensa
 function ensureMetricShape(p){if(!p.mensal)p.mensal={};const len=Math.max(9,p.mensal.r?.length||0,p.mensal.c?.length||0,p.mensal.k?.length||0,p.mensal.s?.length||0,p.mensal.labels?.length||0);['r','c','k','s','sc'].forEach(k=>{if(!Array.isArray(p.mensal[k]))p.mensal[k]=[];while(p.mensal[k].length<len)p.mensal[k].push(0);});if(!Array.isArray(p.mensal.labels)||p.mensal.labels.length!==len)p.mensal.labels=projectLabels(p);p.objMensal=Math.max(0,Number(p.objMensal||0));}
 function periodInputs(p,key,prefix,opts=''){const labels=projectLabels(p);return`<div style="display:grid;grid-template-columns:repeat(${labels.length},minmax(54px,1fr));gap:5px;margin-bottom:12px;overflow-x:auto">${labels.map((m,i)=>`<div><div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:3px;white-space:nowrap">${m}</div><input class="form-in" id="${prefix}-${i}" type="number" ${opts} value="${p.mensal[key][i]||''}" style="padding:4px 4px;text-align:center;font-size:12px"></div>`).join('')}</div>`;}
 function scoreAvg(p){const vals=(p.mensal?.s||[]).filter(Boolean);return vals.length?Number((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)):0;}
+function scoreCollected(p){ensureMetricShape(p);return p.mensal.sc.reduce((a,b)=>a+(b||0),0);}
+function scoreCollectionRate(p){const total=(p.mensal?.r||[]).reduce((a,b)=>a+(b||0),0),got=scoreCollected(p);return total?Math.round((got/total)*100):0;}
+function scoreLabel(v){return Number(v)>0?`Score ${Number(v)}/4`:'Score não recolhido';}
 function projectMonthIndex(p,dateStr){const dt=new Date(dateStr+'T00:00:00');if(isNaN(dt))return-1;const st=inferStartMY(p);return(dt.getFullYear()-st.y)*12+(dt.getMonth()-st.m);}
 function projectMarkets(p){if(Array.isArray(p.mercados)&&p.mercados.length)return p.mercados.filter(Boolean);const txt=[p.nome,p.cliente,p.nota,...(p.fases||[]).flatMap(f=>[f.label,f.note])].join(' ');const defs=[['EAU',/\bEAU\b|emirados/i],['Arábia Saudita',/arabia saudita|saudi/i],['Qatar',/qatar/i],['Kuwait',/kuwait/i],['Omã',/\boma\b|omã/i],['Bahrain',/bahrain/i],['Egipto',/egipto|egypt/i],['MENA',/\bmena\b/i],['GCC',/\bgcc\b/i]];const out=[];defs.forEach(([label,re])=>{if(re.test(txt)&&!out.includes(label))out.push(label);});return out;}
 function projectArabClients(p){const out=[];(p.arabClients||[]).forEach(x=>{if(x&&!out.some(y=>normText(y)===normText(x)))out.push(x);});(S.reunioes||[]).filter(r=>r.projetoId===p.id&&r.arabClient).forEach(r=>{if(!out.some(y=>normText(y)===normText(r.arabClient)))out.push(r.arabClient);});return out;}
 function splitMarkets(v){return String(v||'').split(/[,;|]/).map(x=>x.trim()).filter(Boolean);}
 function phaseMonthIndexes(p,f){const labels=projectLabels(p);const raw=String(f.data||'');const parts=raw.split(/[–-]/).map(x=>parseMY(x, inferStartMY(p).y)).filter(Boolean);let start=parts[0],end=parts[1]||parts[0];if(!start){const i=(p.fases||[]).indexOf(f);return[i>=0&&i<labels.length?i:0];}let a=(start.y-inferStartMY(p).y)*12+(start.m-inferStartMY(p).m),b=(end.y-inferStartMY(p).y)*12+(end.m-inferStartMY(p).m);if(b<a)b=a;const idx=[];for(let i=Math.max(0,a);i<=Math.min(labels.length-1,b);i++)idx.push(i);return idx.length?idx:[Math.max(0,Math.min(labels.length-1,a))];}
 function phaseKPIs(p,f){const idx=phaseMonthIndexes(p,f);const labels=projectLabels(p);const r=idx.reduce((s,i)=>s+(p.mensal.r[i]||0),0);const c=idx.reduce((s,i)=>s+(p.mensal.c[i]||0),0);const scores=idx.map(i=>p.mensal.s[i]||0).filter(Boolean);const score=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'';const period=idx.map(i=>labels[i]).join(', ');return{r,c,score,period};}
-function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0,meetings:projectMonthMeetings(p,i)}));let active=rows.filter(x=>x.r||x.c||x.score||x.meetings.length);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>{const detail=x.meetings.slice(-3).map(r=>`<div style="font-size:11px;color:var(--t2);line-height:1.45;margin-top:4px;background:var(--s2);border-radius:6px;padding:5px 7px"><b>${h(new Date(r.data+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}))}</b>${r.arabClient?` · ${h(r.arabClient)}`:''}${r.score?` · Score ${r.score}/4`:''}<br>${h((r.proximo||r.nota||'').slice(0,150))}${(r.proximo||r.nota||'').length>150?'...':''}</div>`).join('');return`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span></div>${detail}`;}).join('');}
+function phaseMonthRows(p,f){const labels=projectLabels(p);let rows=phaseMonthIndexes(p,f).map(i=>({i,label:labels[i],r:p.mensal.r[i]||0,c:p.mensal.c[i]||0,score:p.mensal.s[i]||0,sc:p.mensal.sc[i]||0,meetings:projectMonthMeetings(p,i)}));let active=rows.filter(x=>x.r||x.c||x.score||x.meetings.length);let shown=(active.length?active:rows).slice(-3);return shown.map(x=>{const detail=x.meetings.slice(-3).map(r=>`<div style="font-size:11px;color:var(--t2);line-height:1.45;margin-top:4px;background:var(--s2);border-radius:6px;padding:5px 7px"><b>${h(new Date(r.data+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}))}</b>${r.arabClient?` · ${h(r.arabClient)}`:''} · ${scoreLabel(r.score)}<br>${h((r.proximo||r.nota||'').slice(0,150))}${(r.proximo||r.nota||'').length>150?'...':''}</div>`).join('');return`<div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${x.label}</b></span><span class="ph-kpi"><b>${x.r}</b> reun.</span><span class="ph-kpi"><b>${x.c}</b> cotações</span><span class="ph-kpi"><b>${x.score?Number(x.score).toFixed(1):'—'}</b> score</span><span class="ph-kpi"><b>${x.sc}</b> scores recolhidos</span></div>${detail}`;}).join('');}
+function monthlyPhaseItems(p){const labels=projectLabels(p),items=[];(p.fases||[]).forEach((f,fi)=>phaseMonthIndexes(p,f).forEach(i=>items.push({f,fi,i,label:labels[i]})));return items.sort((a,b)=>a.i-b.i||a.fi-b.fi);}
+function phaseMonthHTML(p,item,isLast){const f=item.f,i=item.i;const done=f.done;const dc=done?SCOL[p.estado]:'var(--b2)';const lc=done?SCOL[p.estado]+'44':'var(--border)';const r=p.mensal.r[i]||0,c=p.mensal.c[i]||0,score=p.mensal.s[i]||0,sc=p.mensal.sc[i]||0;const meetings=projectMonthMeetings(p,i).slice(-3).map(m=>`<div style="font-size:11px;color:var(--t2);line-height:1.45;margin-top:4px;background:var(--s2);border-radius:6px;padding:5px 7px"><b>${h(new Date(m.data+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}))}</b>${m.arabClient?` · ${h(m.arabClient)}`:''} · ${scoreLabel(m.score)}<br>${h((m.proximo||m.nota||'').slice(0,150))}${(m.proximo||m.nota||'').length>150?'...':''}</div>`).join('');return`<div class="ph-item"><div class="ph-left"><div class="ph-dot" style="background:${dc};border:${done?'none':'1.5px solid var(--b2)'}"></div>${!isLast?`<div class="ph-line" style="background:${lc}"></div>`:''}</div><div class="ph-right"><div class="ph-date">${item.label}</div><div class="ph-name" style="color:${done?'var(--text)':'var(--t3)'}">${f.label}${done?` <i class="ti ti-check" style="font-size:12px;color:var(--green)"></i>`:''}</div><div class="ph-note">${f.note}</div><div class="ph-kpis" style="margin-top:4px"><span class="ph-kpi"><b>${r}</b> reun.</span><span class="ph-kpi"><b>${c}</b> cotações</span><span class="ph-kpi"><b>${score?Number(score).toFixed(1):'—'}</b> score</span><span class="ph-kpi"><b>${sc}</b> scores recolhidos</span></div>${meetings}</div></div>`;}
 function updateCommandStatus(){const alerts=S.alertas.filter(a=>itemMatchesSession(a));const openAlerts=alerts.filter(a=>!a.done).length;const overdue=visibleProjects().filter(p=>p.estado==='risco').length;const el=document.getElementById('cmd-status');if(el)el.textContent=`${openAlerts} alertas abertos · ${overdue} projetos em risco`;}
 function buildSearchIndex(){const hits=[];visibleProjects().forEach(p=>{const am=getAM(p.amId);hits.push({type:'Projeto',icon:'ti-briefcase',view:'pipeline',title:p.nome,meta:`${p.cliente} · ${am.name} · ${SLBL[p.estado]} · ${p.pct}%`,text:[p.nome,p.cliente,am.name,SLBL[p.estado],p.prazo,p.nota].join(' ')});});visibleAMs().forEach(am=>hits.push({type:'AM',icon:'ti-user',view:'equipa',title:am.name,meta:`${am.role} · ${visibleProjects().filter(p=>p.amId===am.id).length} projetos`,text:[am.name,am.role,am.nota].join(' ')}));(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId()).forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);hits.push({type:'Reunião',icon:'ti-video',view:'reunioes',title:r.titulo,meta:`${fmtMeetDate(r)} · ${p.nome||'Sem projeto'} · ${am.name}`,text:[r.titulo,r.proximo,p.nome,p.cliente,am.name,MST[r.status]?.l].join(' ')});});S.alertas.filter(a=>itemMatchesSession(a)).forEach(a=>hits.push({type:'Alerta',icon:'ti-bell',view:'alertas',title:a.title,meta:`${a.done?'Fechado':'Aberto'} · ${a.body}`,text:[a.title,a.body,a.tipo].join(' ')}));S.tarefas.filter(t=>itemMatchesSession(t)).forEach(t=>hits.push({type:'Tarefa',icon:'ti-checkbox',view:'checklist',title:t.label,meta:`${t.done?'Concluida':'Aberta'} · ${t.who}`,text:[t.label,t.who].join(' ')}));if(isAdmin())S.notas.forEach(n=>hits.push({type:'Nota',icon:'ti-notes',view:'notas',title:n.titulo,meta:n.texto,text:[n.titulo,n.texto].join(' ')}));return hits;}
 function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);if(!terms.length)return[];return buildSearchIndex().filter(x=>terms.every(t=>x.text.toLowerCase().includes(t)||x.title.toLowerCase().includes(t)||x.meta.toLowerCase().includes(t))).slice(0,12);}
 function openSearchResults(){const input=document.getElementById('global-search');const q=input?input.value.trim():'';const hits=getSearchResults(q);const body=!q?'<div style="font-size:13px;color:var(--t3);padding:10px 0">Escreva uma pesquisa para procurar em projetos, clientes, equipa, alertas, tarefas e notas.</div>':hits.length?`<div class="search-results">${hits.map(x=>`<button class="search-hit" onclick="goSearchHit('${x.view}')"><div class="search-hit-top"><i class="ti ${x.icon}" style="font-size:14px;color:var(--t3)"></i><span class="search-hit-type">${h(x.type)}</span></div><div class="search-hit-title">${h(x.title)}</div><div class="search-hit-meta">${h(x.meta)}</div></button>`).join('')}</div>`:'<div style="font-size:13px;color:var(--t3);padding:10px 0">Sem resultados para esta pesquisa.</div>';openModal(`<div class="modal-head"><div class="modal-title">Resultados da pesquisa</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}`,null);}
 function goSearchHit(view){closeModal();const btn=document.querySelector(`[data-view="${view}"]`);if(btn)btn.click();}
 function exportData(){const payload={exportedAt:new Date().toISOString(),version:STORE,data:S,calendar:calEvents};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`maab-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+function x(v){return String(v??'').replace(/[<>&'"]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[m]));}
+function xlsCell(v){const n=typeof v==='number'&&isFinite(v);return`<Cell><Data ss:Type="${n?'Number':'String'}">${x(v)}</Data></Cell>`;}
+function xlsSheet(name,rows){return`<Worksheet ss:Name="${x(String(name).slice(0,31))}"><Table>${rows.map(r=>`<Row>${r.map(xlsCell).join('')}</Row>`).join('')}</Table></Worksheet>`;}
+function downloadXls(filename,sheets){const xml=`<?xml version="1.0" encoding="UTF-8"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${sheets.join('')}</Workbook>`;const blob=new Blob([xml],{type:'application/vnd.ms-excel;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+function openMonthlyReport(){const now=new Date().toISOString().slice(0,7);openModal(mS('Exportar relatório mensal Excel',`<div class="form-row"><label class="form-lbl">Mês do relatório</label><input class="form-in" id="rep-month" type="month" value="${now}"></div><div style="font-size:12px;color:var(--t2);line-height:1.5">O ficheiro inclui folhas de resumo, Account Managers, projetos, reuniões, follow-ups e clientes concluídos. A exportação respeita a sessão atual.</div>`),()=>{const month=document.getElementById('rep-month').value||now;exportMonthlyReport(month);closeModal();});}
+function inMonth(dateStr,month){return String(dateStr||'').slice(0,7)===month;}
+function eventInMonth(ts,month){const d=new Date(ts);return !isNaN(d)&&d.toISOString().slice(0,7)===month;}
+function monthLabelFull(month){const d=new Date(month+'-01T00:00:00');return d.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});}
+function monthMetric(p,arr,month){const i=projectMonthIndex(p,month+'-01');return i>=0&&i<(arr||[]).length?(arr[i]||0):0;}
+function projectNextSteps(p,month){return(S.reunioes||[]).filter(r=>r.projetoId===p.id&&inMonth(r.data,month)).map(r=>r.proximo||r.nota).filter(Boolean).join(' | ');}
+function exportMonthlyReport(month){
+  const ps=visibleProjects().map(p=>{ensureMetricShape(p);return p;});
+  const ams=visibleAMs();
+  const meetings=(S.reunioes||[]).filter(r=>(isAdmin()||r.amId===activeAmId())&&inMonth(r.data,month));
+  const followups=calEvents.filter(ev=>itemMatchesSession(ev)&&isFollowupReminder(ev)&&eventInMonth(ev.ts,month));
+  const completed=ps.filter(p=>p.estado==='concluido');
+  const scoreVals=ps.flatMap(p=>p.mensal.s||[]).filter(Boolean);
+  const monthScores=meetings.map(r=>Number(r.score||0)).filter(v=>v>0);
+  const monthScoreAvg=monthScores.length?Number((monthScores.reduce((a,b)=>a+b,0)/monthScores.length).toFixed(1)):'—';
+  const scoreRate=meetings.length?Math.round((monthScores.length/meetings.length)*100):0;
+  const summary=[
+    ['Relatório mensal MAAB',monthLabelFull(month)],
+    ['Sessão',isAdmin()?'Administrador':activeAM().name],
+    ['Gerado em',new Date().toLocaleString('pt-PT')],
+    ['Projetos visíveis',ps.length],
+    ['Projetos ativos',ps.filter(p=>p.estado==='active'||p.estado==='inicio').length],
+    ['Projetos em risco',ps.filter(p=>p.estado==='risco').length],
+    ['Projetos concluídos',completed.length],
+    ['Reuniões no mês',meetings.length],
+    ['Scores recolhidos no mês',monthScores.length],
+    ['Taxa de score recolhido',scoreRate+'%'],
+    ['Score médio real no mês',monthScoreAvg],
+    ['Follow-ups no mês',followups.length],
+    ['Follow-ups vencidos/em aberto',followups.filter(ev=>followStatus(ev)!=='feito'&&followStatus(ev)!=='novareuniao'&&ev.ts<Date.now()).length]
+  ];
+  const amRows=[['Account Manager','Projetos','Em risco','Reuniões no mês','Scores recolhidos','Taxa score recolhido','Objetivo mensal total','Cumprimento objetivo','Follow-ups abertos','Follow-ups vencidos']];
+  ams.forEach(am=>{const aps=ps.filter(p=>p.amId===am.id),amsMeet=meetings.filter(r=>r.amId===am.id),got=amsMeet.filter(r=>Number(r.score)>0).length,obj=aps.reduce((s,p)=>s+(p.objMensal||0),0),done=aps.reduce((s,p)=>s+monthMetric(p,p.mensal.r,month),0),fus=followups.filter(ev=>ev.ownerAmId===am.id&&followStatus(ev)!=='feito'&&followStatus(ev)!=='novareuniao');amRows.push([am.name,aps.length,aps.filter(p=>p.estado==='risco').length,amsMeet.length,got,amsMeet.length?Math.round((got/amsMeet.length)*100)+'%':'0%',obj,obj?Math.round((done/obj)*100)+'%':'—',fus.length,fus.filter(ev=>ev.ts<Date.now()).length]);});
+  const projRows=[['Cliente','Projeto','AM','Estado','Progresso %','Mercados','Empresas árabes','Objetivo mensal','Reuniões no mês','Cotações no mês','Score médio projeto','Score recolhido %','Próximos passos do mês','Feedback final']];
+  ps.forEach(p=>projRows.push([p.cliente,p.nome,getAM(p.amId).name,SLBL[p.estado]||p.estado,p.pct,projectMarkets(p).join(', '),projectArabClients(p).join(', '),p.objMensal||0,monthMetric(p,p.mensal.r,month),monthMetric(p,p.mensal.c,month),scoreAvg(p)||'',scoreCollectionRate(p)+'%',projectNextSteps(p,month),p.feedbackFinal||'']));
+  const meetRows=[['Data','Hora','AM','Projeto','Cliente','Empresa árabe','Estado','Score','Nota / informação','Próximo passo']];
+  meetings.sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).forEach(r=>{const p=getP(r.projetoId)||{};meetRows.push([r.data,r.hora||'',getAM(r.amId).name,p.nome||'',p.cliente||'',r.arabClient||'',MST[r.status]?.l||r.status,scoreLabel(r.score),r.nota||'',r.proximo||'']);});
+  const fuRows=[['Data','Hora','AM','Projeto','Cliente','Estado follow-up','Nota']];
+  followups.sort((a,b)=>a.ts-b.ts).forEach(ev=>{const p=getP(ev.projectId)||{};fuRows.push([new Date(ev.ts).toISOString().slice(0,10),calFmtH(ev.ts),getAM(ev.ownerAmId).name,p.nome||'',p.cliente||'',(FST[followStatus(ev)]||FST.aberto).l,ev.note||ev.title||'']);});
+  const doneRows=[['Cliente','Projeto','AM','Período','Reuniões total','Cotações total','Score médio','Score recolhido %','Feedback final']];
+  completed.forEach(p=>{const labels=projectLabels(p);doneRows.push([p.cliente,p.nome,getAM(p.amId).name,`${labels[0]} → ${labels[labels.length-1]}`,p.mensal.r.reduce((a,b)=>a+b,0),p.mensal.c.reduce((a,b)=>a+b,0),scoreAvg(p)||'',scoreCollectionRate(p)+'%',p.feedbackFinal||p.nota||'']);});
+  downloadXls(`maab-relatorio-${month}.xls`,[xlsSheet('Resumo',summary),xlsSheet('Account Managers',amRows),xlsSheet('Projetos',projRows),xlsSheet('Reunioes',meetRows),xlsSheet('Follow-ups',fuRows),xlsSheet('Concluidos',doneRows)]);
+}
 function importData(event){const file=event.target.files&&event.target.files[0];event.target.value='';if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);const next=payload.data||payload;if(!next||!Array.isArray(next.ams)||!Array.isArray(next.projetos))throw new Error('Formato invalido');S=next;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=JSON.parse(JSON.stringify(DEF.reunioes));S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});if(Array.isArray(payload.calendar)){calEvents=payload.calendar;calSave();}save();renderView(VIEW);updateCommandStatus();}catch(e){alert('Nao foi possivel importar este ficheiro. Confirme que e um backup JSON do dashboard MAAB.');}};reader.readAsText(file);}
 
 let VIEW='overview';
@@ -478,8 +539,39 @@ function renderGM(){
   updateCommandStatus();
 }
 
+const FST={aberto:{l:'Aberto',c:'p-info'},feito:{l:'Feito',c:'p-ok'},adiado:{l:'Adiado',c:'p-warn'},semresposta:{l:'Sem resposta',c:'p-hot'},novareuniao:{l:'Nova reunião marcada',c:'p-ok'}};
+function followStatus(ev){return ev.followStatus||'aberto';}
+function followStatusClass(ev){return{feito:'ev-feito',adiado:'ev-adiado',semresposta:'ev-semresposta',novareuniao:'ev-novareuniao'}[followStatus(ev)]||'';}
+function isFollowupReminder(ev){return String(ev.id||'').startsWith('fu-');}
+function shortDateLabel(ts){return new Date(ts).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});}
+function dashRows(items,empty,fn){return items.length?items.map(fn).join(''):`<div class="am-dash-empty">${empty}</div>`;}
+function renderAMDashboard(){
+  const box=document.getElementById('am-dashboard');if(!box)return;
+  if(isAdmin()){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='grid';
+  const amId=activeAmId(),today=new Date();today.setHours(0,0,0,0);
+  const ps=visibleProjects();
+  const meetings=(S.reunioes||[]).filter(r=>r.amId===amId&&(r.status==='agendada'||r.status==='followup')).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).slice(0,4);
+  const followups=calEvents.filter(ev=>ev.ownerAmId===amId&&isFollowupReminder(ev)&&followStatus(ev)!=='feito'&&followStatus(ev)!=='novareuniao').sort((a,b)=>a.ts-b.ts);
+  const overdue=followups.filter(ev=>ev.ts<today.getTime()).slice(0,4);
+  const risk=ps.filter(p=>p.estado==='risco').slice(0,4);
+  const nowStr=new Date().toISOString().slice(0,10);
+  const objectives=ps.map(p=>{const i=projectMonthIndex(p,nowStr);const target=p.objMensal||0;return target&&i>=0?{p,done:p.mensal.r[i]||0,target}:null;}).filter(Boolean).slice(0,4);
+  const nextSteps=[
+    ...meetings.map(r=>({date:new Date((r.data||nowStr)+'T'+(r.hora||'09:00')).getTime(),text:r.proximo||r.nota||r.titulo,project:getP(r.projetoId)?.cliente||''})),
+    ...followups.map(ev=>({date:ev.ts,text:ev.note||ev.title,project:getP(ev.projectId)?.cliente||''}))
+  ].sort((a,b)=>a.date-b.date).slice(0,4);
+  box.innerHTML=`
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-video"></i>Reuniões pendentes</div>${dashRows(meetings,'Sem reuniões pendentes.',r=>`<div class="am-dash-row"><b>${shortDateLabel(new Date((r.data||nowStr)+'T00:00:00').getTime())}</b> · ${h(r.titulo)}<br><span style="color:var(--t3)">${h(getP(r.projetoId)?.cliente||'Sem cliente')}</span></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-clock-exclamation"></i>Follow-ups vencidos</div>${dashRows(overdue,'Sem follow-ups vencidos.',ev=>`<div class="am-dash-row"><b>${shortDateLabel(ev.ts)}</b> · ${h(ev.title)}<br><span class="pill ${(FST[followStatus(ev)]||FST.aberto).c}" style="font-size:10px;padding:1px 7px">${(FST[followStatus(ev)]||FST.aberto).l}</span></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-alert-triangle"></i>Projetos em risco</div>${dashRows(risk,'Sem projetos em risco.',p=>`<div class="am-dash-row"><b>${h(p.cliente)}</b><br>${h(p.nome)} · ${p.pct}%</div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-target-arrow"></i>Objetivos do mês</div>${dashRows(objectives,'Sem objetivos definidos este mês.',o=>`<div class="am-dash-row"><b>${h(o.p.cliente)}</b><br>${o.done}/${o.target} reuniões <span style="color:var(--t3)">(${Math.min(100,Math.round((o.done/o.target)*100))}%)</span></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-list-check"></i>Próximos passos</div>${dashRows(nextSteps,'Sem próximos passos registados.',x=>`<div class="am-dash-row"><b>${shortDateLabel(x.date)}</b> · ${h(x.project)}<br>${h(String(x.text||'').slice(0,110))}${String(x.text||'').length>110?'...':''}</div>`)}</div>`;
+}
+
 function renderOverview(){
   renderGM();
+  renderAMDashboard();
   const t=document.getElementById('ov-team');t.innerHTML='';
   visibleAMs().forEach(am=>{const ps=visibleProjects().filter(p=>p.amId===am.id);const med=ps.length?Math.round(ps.reduce((s,p)=>s+p.pct,0)/ps.length):0;const risco=ps.filter(p=>p.estado==='risco').length;const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer';d.innerHTML=`${avH(am,28)}<div style="flex:1"><div style="font-size:13px;font-weight:500">${am.name}</div><div style="font-size:11px;color:var(--t3)">${ps.length} projetos${risco>0?` · <span style="color:var(--amber)">${risco} em risco</span>`:''}</div></div><div style="width:65px"><div class="pbar"><div class="pbar-f" style="width:${med}%;background:${am.color}"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right">${med}%</div></div>`;d.onclick=()=>document.querySelector('[data-view="equipa"]').click();t.appendChild(d);});
   const al=document.getElementById('ov-alerts');al.innerHTML='';
@@ -532,6 +624,7 @@ function buildProjBlock(p,am){
       <div class="kpi-chip"><div class="kpi-v">€${(p.revenue/1000).toFixed(1)}k</div><div class="kpi-l">Orçamento est.</div></div>
       <div class="kpi-chip"><div class="kpi-v">${comms.length}</div><div class="kpi-l">Comentários</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${scoreAvg(p)||'—'}</div><div class="kpi-l">Score médio</div></div>
+      <div class="kpi-chip"><div class="kpi-v" style="color:var(--blue)">${scoreCollectionRate(p)}%</div><div class="kpi-l">Score recolhido</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:var(--red)">${p.objMensal||'—'}</div><div class="kpi-l">Objetivo mensal</div></div>
     </div>
     <div class="tab-row">
@@ -547,12 +640,13 @@ function buildProjBlock(p,am){
         <span class="leg-item"><span style="display:inline-block;width:18px;border-top:2px solid #A32D2D"></span>Objetivo mensal</span>
       </div>
       <div style="font-size:11px;color:var(--t3);margin-bottom:7px">${labels[0]} → ${labels[labels.length-1]}</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:7px">Score 0 = não recolhido; não entra na média.</div>
       <div style="position:relative;width:100%;height:200px"><canvas id="ch-${p.id}" role="img" aria-label="Gráfico mensal ${p.nome}">Períodos: ${labels.join(', ')}. Reuniões: ${p.mensal.r.join(', ')}. Cotações: ${p.mensal.c.join(', ')}. Score médio: ${p.mensal.s.join(', ')}. Objetivo mensal: ${p.objMensal||0}.</canvas></div>
     </div>
     <div id="tf-${p.id}" class="phases-area" style="display:none">
       <div style="margin-bottom:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:6px">Países / mercados alvo</div><div class="ph-kpis">${markets.length?markets.map(m=>`<span class="ph-kpi"><i class="ti ti-map-pin" style="font-size:11px"></i> ${h(m)}</span>`).join(''):'<span class="ph-kpi">Sem mercados definidos</span>'}</div></div>
       <div style="margin-bottom:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:6px">Empresas árabes associadas</div><div class="ph-kpis">${arabClients.length?arabClients.map(m=>`<span class="ph-kpi"><i class="ti ti-building-skyscraper" style="font-size:11px"></i> ${h(m)}</span>`).join(''):'<span class="ph-kpi">Sem empresas associadas</span>'}</div></div>
-      ${p.fases.map((f,i)=>{const isL=i===p.fases.length-1;const dc=f.done?SCOL[p.estado]:'var(--b2)';const lc=f.done?SCOL[p.estado]+'44':'var(--border)';return`<div class="ph-item"><div class="ph-left"><div class="ph-dot" style="background:${dc};border:${f.done?'none':'1.5px solid var(--b2)'}"></div>${!isL?`<div class="ph-line" style="background:${lc}"></div>`:''}</div><div class="ph-right"><div class="ph-date">${f.data}</div><div class="ph-name" style="color:${f.done?'var(--text)':'var(--t3)'}">${f.label}${f.done?` <i class="ti ti-check" style="font-size:12px;color:var(--green)"></i>`:''}</div><div class="ph-note">${f.note}</div>${phaseMonthRows(p,f)}</div></div>`;}).join('')}
+      ${(()=>{const items=monthlyPhaseItems(p);return items.length?items.map((item,i)=>phaseMonthHTML(p,item,i===items.length-1)).join(''):'<div style="font-size:13px;color:var(--t3)">Sem fases registadas.</div>';})()}
     </div>
     <div id="tm-${p.id}" style="display:none">
       ${pinned.length>0?`<div style="background:var(--blue-bg);border-bottom:1px solid var(--blue-lt);padding:10px 18px"><div style="font-size:11px;color:var(--blue);font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-pin" style="font-size:11px"></i>Fixados</div>${pinned.map(c=>`<div style="font-size:12px;color:var(--blue);padding:3px 0">${c.author}: ${c.text.length>100?c.text.substring(0,100)+'…':c.text}</div>`).join('')}</div>`:''}
@@ -598,7 +692,7 @@ function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div clas
 
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
 
-function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;const labels=projectLabels(p);const datasets=[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:p.mensal.s,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}];if(p.objMensal>0)datasets.push({label:'Objetivo mensal',data:labels.map(()=>p.objMensal),yAxisID:'y',borderColor:'#A32D2D',borderDash:[8,4],backgroundColor:'transparent',tension:0,fill:false,borderWidth:2,pointRadius:0});CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
+function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;const labels=projectLabels(p);const scoreData=p.mensal.s.map(v=>v?Number(v):null);const datasets=[{label:'Reuniões',data:p.mensal.r,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,yAxisID:'y',borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Score médio',data:scoreData,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true}];if(p.objMensal>0)datasets.push({label:'Objetivo mensal',data:labels.map(()=>p.objMensal),yAxisID:'y',borderColor:'#A32D2D',borderDash:[8,4],backgroundColor:'transparent',tension:0,fill:false,borderWidth:2,pointRadius:0});CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
 window.addEventListener('resize',()=>Object.values(CHARTS).forEach(ch=>ch.resize()));
 function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);const p=getP(pid);if(!ta||!sel||!p||!canSeeProject(p))return;const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];const author=isAdmin()?{name:'Gestor',init:'GM',color:'#E6F1FB',tc:'#185FA5'}:{name:activeAM().name,init:activeAM().init,color:activeAM().color,tc:activeAM().tc};S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:author.name,authorInit:author.init,authorColor:author.color,authorTc:author.tc,type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
 function togglePin(cid,pid){const c=(S.comments[pid]||[]).find(x=>String(x.id)===String(cid));if(c){c.pinned=!c.pinned;save();renderEquipa();}}
@@ -636,7 +730,7 @@ function renderConcluidos(){
     const max=Math.max(1,...p.mensal.r);
     const feedback=(p.feedbackFinal||p.nota||((S.comments[p.id]||[]).filter(c=>!c.deleted).map(c=>c.text).join('\n\n'))||'Sem feedback final registado.');
     const div=document.createElement('div');div.className='done-card';
-    div.innerHTML=`<div class="done-top"><div><div class="done-title">${h(p.cliente)}</div><div class="done-meta">${h(p.nome)} · ${labels[0]} → ${labels[labels.length-1]}</div></div>${avH(am,32)}</div><div class="done-meta">${h(am.name)} · ${h(am.role||'AM')}</div><div class="done-strip"><span class="done-mini"><b>${totalR}</b> reuniões</span><span class="done-mini"><b>${totalC}</b> cotações</span><span class="done-mini"><b>${totalK}</b> contratos</span><span class="done-mini"><b>${avg||'—'}</b> score médio</span></div><div class="mini-chart">${p.mensal.r.map((v,i)=>`<span class="mini-bar" title="${h(labels[i])}: ${v} reuniões" style="height:${Math.max(8,(v/max)*38)}px;background:${v?'var(--blue-lt)':'var(--s2)'}"></span>`).join('')}</div><div class="done-feedback">${h(feedback.length>360?feedback.slice(0,360)+'...':feedback)}</div><div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-sm" onclick="openEditProj(${p.id})"><i class="ti ti-edit"></i>Editar feedback</button><button class="btn btn-sm" onclick="document.querySelector('[data-view=&quot;equipa&quot;]').click();setTimeout(()=>openEditProj(${p.id}),100)"><i class="ti ti-chart-line"></i>Ver projeto</button></div>`;
+    div.innerHTML=`<div class="done-top"><div><div class="done-title">${h(p.cliente)}</div><div class="done-meta">${h(p.nome)} · ${labels[0]} → ${labels[labels.length-1]}</div></div>${avH(am,32)}</div><div class="done-meta">${h(am.name)} · ${h(am.role||'AM')}</div><div class="done-strip"><span class="done-mini"><b>${totalR}</b> reuniões</span><span class="done-mini"><b>${totalC}</b> cotações</span><span class="done-mini"><b>${totalK}</b> contratos</span><span class="done-mini"><b>${avg||'—'}</b> score médio</span><span class="done-mini"><b>${scoreCollectionRate(p)}%</b> score recolhido</span></div><div class="mini-chart">${p.mensal.r.map((v,i)=>`<span class="mini-bar" title="${h(labels[i])}: ${v} reuniões" style="height:${Math.max(8,(v/max)*38)}px;background:${v?'var(--blue-lt)':'var(--s2)'}"></span>`).join('')}</div><div class="done-feedback">${h(feedback.length>360?feedback.slice(0,360)+'...':feedback)}</div><div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-sm" onclick="openEditProj(${p.id})"><i class="ti ti-edit"></i>Editar feedback</button><button class="btn btn-sm" onclick="document.querySelector('[data-view=&quot;equipa&quot;]').click();setTimeout(()=>openEditProj(${p.id}),100)"><i class="ti ti-chart-line"></i>Ver projeto</button></div>`;
     grid.appendChild(div);
   });
 }
@@ -656,7 +750,7 @@ function projectMatchScore(raw,p){const n=normText(raw);const fields=[p.nome,p.c
 function findMeetingProject(raw,scope){const candidates=(scope&&scope.length?scope:visibleProjects()).map(p=>({p,score:projectMatchScore(raw,p)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);return candidates[0]?.p||null;}
 function extractArabClient(raw){const text=String(raw||'');const patterns=[/(?:empresa|cliente|comprador|distribuidor|importador|parceiro)\s+(?:árabe|arabe|local|gcc|mena)?\s*[:\-–]\s*([^.\n;]+)/i,/(?:com|reuniu com|meeting with)\s+([A-ZÀ-Ú0-9][^.\n;]{2,60}(?:LLC|L\.L\.C|Trading|Foods|Group|FZE|FZCO|Co\.?|Company|Est\.?)?)/i];for(const re of patterns){const m=text.match(re);if(m&&m[1])return m[1].trim().replace(/\s+/g,' ');}return '';}
 function addBusinessDays(dateStr,days){const d=new Date((dateStr||new Date().toISOString().slice(0,10))+'T09:00:00');let left=days;while(left>0){d.setDate(d.getDate()+1);const wd=d.getDay();if(wd!==0&&wd!==6)left--;}return d;}
-function ensureFollowupReminder(meeting,p,am){const baseId='fu-'+meeting.id;if(calEvents.some(ev=>ev.id===baseId))return;const d=addBusinessDays(meeting.data,5);const who=meeting.arabClient?` com ${meeting.arabClient}`:'';calEvents.push({id:baseId,title:`Follow-up${who} · ${p.cliente}`,type:'tarefa',ts:d.getTime(),dur:30,ownerAmId:am.id,meetingId:meeting.id,projectId:p.id,note:meeting.proximo||meeting.nota||''});calSave();}
+function ensureFollowupReminder(meeting,p,am){const baseId='fu-'+meeting.id;if(calEvents.some(ev=>ev.id===baseId))return;const d=addBusinessDays(meeting.data,5);const who=meeting.arabClient?` com ${meeting.arabClient}`:'';calEvents.push({id:baseId,title:`Follow-up${who} · ${p.cliente}`,type:'tarefa',ts:d.getTime(),dur:30,ownerAmId:am.id,meetingId:meeting.id,projectId:p.id,note:meeting.proximo||meeting.nota||'',followStatus:'aberto'});calSave();}
 function projectMonthMeetings(p,idx){return(S.reunioes||[]).filter(r=>r.projetoId===p.id&&projectMonthIndex(p,r.data)===idx).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));}
 function destroyChart(pid){const cid='ch-'+pid;if(CHARTS[cid]){CHARTS[cid].destroy();delete CHARTS[cid];}}
 function scheduleChartRender(p,attempt=0){const canvas=document.getElementById('ch-'+p.id);if(!canvas)return;const box=canvas.parentElement;if(!box||box.offsetWidth<40){if(attempt<8)setTimeout(()=>scheduleChartRender(p,attempt+1),80);return;}destroyChart(p.id);initChartScore2(p);requestAnimationFrame(()=>{if(CHARTS['ch-'+p.id])CHARTS['ch-'+p.id].resize();});}
@@ -700,7 +794,7 @@ function renderReunioes(){
   document.getElementById('meet-metrics').innerHTML=`<div class="mc"><div class="mc-l">Registos</div><div class="mc-v">${total}</div></div><div class="mc"><div class="mc-l">Realizadas</div><div class="mc-v" style="color:var(--green)">${done}</div></div><div class="mc"><div class="mc-l">Follow-up</div><div class="mc-v" style="color:var(--amber)">${follow}</div></div><div class="mc"><div class="mc-l">Agendadas</div><div class="mc-v" style="color:var(--blue)">${planned}</div></div>`;
   const feed=document.getElementById('meet-body');feed.innerHTML='';
   if(!meetings.length){feed.innerHTML='<div class="card" style="text-align:center;color:var(--t3);font-size:13px">Sem registos de reunião neste filtro.</div>';return;}
-  meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const arab=r.arabClient?` · ${h(r.arabClient)}`:'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}${arab}${r.score?' · Score '+r.score+'/4':''}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto, fases/KPIs e calendário de follow-up</div></div>`;feed.appendChild(c);});
+  meetings.forEach(r=>{const p=getP(r.projetoId)||{};const am=getAM(r.amId);const st=MST[r.status]||MST.realizada;const text=r.nota||r.proximo||'';const arab=r.arabClient?` · ${h(r.arabClient)}`:'';const c=document.createElement('div');c.className='meet-card';c.innerHTML=`<div class="meet-card-top"><div><div class="meet-card-title">${h(r.titulo)}</div><div class="meet-card-meta">${fmtMeetDate(r)}${r.hora?' · '+h(r.hora):''} · ${h(am.name)} · ${h(p.nome||'Sem projeto')}${arab} · ${scoreLabel(r.score)}</div></div><span class="pill ${st.c}">${st.l}</span></div><div class="meet-card-text">${h(text)}</div><div class="meet-sync"><i class="ti ti-refresh" style="font-size:12px"></i>Sincronizado no projeto, fases/KPIs e calendário de follow-up</div></div>`;feed.appendChild(c);});
 }
 function saveMeetingNote(){
   const amId=isAdmin()?parseInt(document.getElementById('meet-am').value):activeAmId(),projectId=parseInt(document.getElementById('meet-project').value);
@@ -711,7 +805,7 @@ function saveMeetingNote(){
   const arabClient=(document.getElementById('meet-arab-client').value||'').trim();
   const stamp=new Date(date+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});
   const title=`Reunião · ${p.cliente}${arabClient?' · '+arabClient:''}`;
-  const full=`${stamp} · ${p.nome}${arabClient?` · Empresa árabe: ${arabClient}`:''}${score?` · Score ${score}/4`:''}\n${note}`;
+  const full=`${stamp} · ${p.nome}${arabClient?` · Empresa árabe: ${arabClient}`:''} · ${scoreLabel(score)}\n${note}`;
   const rec={id:S.nextId++,data:date,hora:'',titulo:title,projetoId:projectId,amId,status,nota:note,proximo:note,score,arabClient};
   S.reunioes.unshift(rec);
   if(!S.comments[projectId])S.comments[projectId]=[];
@@ -721,7 +815,7 @@ function saveMeetingNote(){
   am.nota=[full,am.nota].filter(Boolean).join('\n\n');
   ensureMetricShape(p);let mIdx=projectMonthIndex(p,date);if(mIdx>=p.mensal.r.length){while(p.mensal.r.length<=mIdx){p.mensal.r.push(0);p.mensal.c.push(0);p.mensal.k.push(0);p.mensal.s.push(0);p.mensal.sc.push(0);}p.mensal.labels=projectLabels(p);}if(mIdx>=0&&mIdx<p.mensal.r.length){p.mensal.r[mIdx]=(p.mensal.r[mIdx]||0)+1;if(score>=1&&score<=4){const count=p.mensal.sc[mIdx]||0;p.mensal.s[mIdx]=Number((((p.mensal.s[mIdx]||0)*count+score)/(count+1)).toFixed(1));p.mensal.sc[mIdx]=count+1;}}
   ensureFollowupReminder(rec,p,am);
-  document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-arab-client').value='';document.getElementById('meet-detect').textContent='';document.getElementById('meet-score').value='';
+  document.getElementById('meet-note').value='';document.getElementById('meet-raw').value='';document.getElementById('meet-arab-client').value='';document.getElementById('meet-detect').textContent='';document.getElementById('meet-score').value='0';
   destroyChart(p.id);
   save();renderReunioes();
 }
@@ -781,7 +875,7 @@ function openEditProj(id){
     ${periodInputs(p,'r','fr','min="0"')}
     <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Pedidos de cotação</div>
     ${periodInputs(p,'c','fc','min="0"')}
-    <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Score médio cliente (1-4)</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500">Score médio cliente (0-4; 0 = não recolhido)</div>
     ${periodInputs(p,'s','fs','min="0" max="4" step="0.1"')}
     <div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${p.nota||''}</textarea></div>
     <div class="form-row"><label class="form-lbl">Feedback final do cliente / projeto concluído</label><textarea class="form-ta" id="f-feedback" placeholder="Resumo do feedback recolhido, resultados, pontos fortes e melhorias...">${p.feedbackFinal||''}</textarea></div>
@@ -840,12 +934,28 @@ function calLoadEvents(){
 function calSave(){try{localStorage.setItem(CAL_STORE,JSON.stringify(calEvents));}catch(e){}}
 function calMoveWeek(dir){calBaseMonday=new Date(calBaseMonday.getTime()+dir*7*86400000);renderCalendario();}
 function calGoToday(){calBaseMonday=calGetMonday(new Date());renderCalendario();}
+function calSetDateInput(){const el=document.getElementById('cal-ev-date');if(el&&!el.value)el.value=new Date().toISOString().slice(0,10);}
 
 function calWeekDays(){const days=[];for(let i=0;i<5;i++){const d=new Date(calBaseMonday);d.setDate(d.getDate()+i);days.push(d);}return days;}
 function calMeetingEvents(){return(S.reunioes||[]).filter(r=>isAdmin()||r.amId===activeAmId()).map(r=>{const p=getP(r.projetoId)||{};const d=new Date((r.data||new Date().toISOString().slice(0,10))+'T'+(r.hora||'09:00'));return{id:'meet-'+r.id,title:r.titulo||('Follow-up '+(p.cliente||'')),type:r.status==='followup'?'tarefa':'reuniao',ts:d.getTime(),dur:60,generated:true,ownerAmId:r.amId};});}
 function calVisibleEvents(){return[...calEvents.filter(ev=>itemMatchesSession(ev)),...calMeetingEvents()];}
+function openFollowupStatus(id){
+  const ev=calEvents.find(x=>String(x.id)===String(id));if(!ev)return;
+  const st=followStatus(ev),p=getP(ev.projectId)||{},am=getAM(ev.ownerAmId);
+  const opts=[['aberto','Aberto'],['feito','Feito'],['adiado','Adiado'],['semresposta','Sem resposta'],['novareuniao','Nova reunião marcada']].map(([v,l])=>`<option value="${v}"${st===v?' selected':''}>${l}</option>`).join('');
+  openModal(mS('Estado do follow-up',`<div class="form-row"><label class="form-lbl">Follow-up</label><div style="font-size:13px;color:var(--text);line-height:1.45">${h(ev.title)}</div></div><div class="form-row"><label class="form-lbl">Projeto / AM</label><div style="font-size:12px;color:var(--t2)">${h(p.nome||'Sem projeto')} · ${h(am.name||'')}</div></div><div class="form-row"><label class="form-lbl">Estado</label><select class="form-sel" id="fu-status">${opts}</select></div><div class="form-row"><label class="form-lbl">Nota / próximo passo</label><textarea class="form-ta" id="fu-note">${h(ev.note||'')}</textarea></div>`),()=>{
+    const next=document.getElementById('fu-status').value;
+    ev.followStatus=next;
+    ev.note=(document.getElementById('fu-note').value||'').trim();
+    if(next==='adiado'){ev.ts=addBusinessDays(new Date(ev.ts).toISOString().slice(0,10),5).getTime();ev.type='tarefa';}
+    if(next==='novareuniao')ev.type='reuniao';
+    if(next==='feito'||next==='semresposta')ev.type='tarefa';
+    calSave();closeModal();renderCalendario();renderOverview();
+  });
+}
 
 function renderCalendario(){
+  calSetDateInput();
   const days=calWeekDays();
   const today=new Date();
   document.getElementById('cal-week-lbl').textContent=calFmt(days[0])+' – '+calFmt(days[4])+', '+days[0].getFullYear();
@@ -876,11 +986,12 @@ function renderCalendario(){
       const top=(ed.getHours()-CAL_HOURS[0])*CAL_SLOT+(ed.getMinutes()/60)*CAL_SLOT;
       const height=Math.max(22,(ev.dur/60)*CAL_SLOT-2);
       const el=document.createElement('div');
-      el.className='cal-event '+(EV_TYPES[ev.type]||'ev-nota');
+      el.className='cal-event '+(EV_TYPES[ev.type]||'ev-nota')+' '+followStatusClass(ev);
       el.style.top=top+'px';el.style.height=height+'px';
-      el.innerHTML=`${ev.title}<div class="ev-time">${calFmtH(ev.ts)} · ${ev.dur}min</div>`;
-      el.title=ev.generated?`${ev.title} — ${calFmtH(ev.ts)}. Criado no controlo de reuniões.`:`${ev.title} — ${calFmtH(ev.ts)}. Clique para apagar.`;
-      el.onclick=e=>{e.stopPropagation();if(ev.generated)return;if(confirm(`Apagar "${ev.title}"?`)){calEvents=calEvents.filter(x=>x.id!==ev.id);calSave();renderCalendario();}};
+      const stTxt=isFollowupReminder(ev)?` · ${(FST[followStatus(ev)]||FST.aberto).l}`:'';
+      el.innerHTML=`${ev.title}<div class="ev-time">${calFmtH(ev.ts)} · ${ev.dur}min${stTxt}</div>`;
+      el.title=isFollowupReminder(ev)?`${ev.title} — clique para atualizar o estado.`:(ev.generated?`${ev.title} — ${calFmtH(ev.ts)}. Criado no controlo de reuniões.`:`${ev.title} — ${calFmtH(ev.ts)}. Clique para apagar.`);
+      el.onclick=e=>{e.stopPropagation();if(isFollowupReminder(ev))return openFollowupStatus(ev.id);if(ev.generated)return;if(confirm(`Apagar "${ev.title}"?`)){calEvents=calEvents.filter(x=>x.id!==ev.id);calSave();renderCalendario();}};
       col.appendChild(el);
     });
     grid.appendChild(col);
@@ -912,12 +1023,13 @@ const var_green_bg='#EAF3DE';const var_red_bg='#FCEBEB';
 
 function calAddEvent(){
   const title=document.getElementById('cal-ev-title').value.trim();if(!title)return;
-  const dayIdx=parseInt(document.getElementById('cal-ev-day').value);
+  const dateVal=document.getElementById('cal-ev-date').value||new Date().toISOString().slice(0,10);
   const hour=parseInt(document.getElementById('cal-ev-hour').value);
   const dur=parseInt(document.getElementById('cal-ev-dur').value);
   const type=document.getElementById('cal-ev-type').value;
-  const d=new Date(calBaseMonday);d.setDate(d.getDate()+dayIdx);d.setHours(hour,0,0,0);
+  const d=new Date(dateVal+'T00:00:00');d.setHours(hour,0,0,0);
   calEvents.push({id:Date.now(),title,type,ts:d.getTime(),dur,ownerAmId:activeAmId()});
+  calBaseMonday=calGetMonday(d);
   document.getElementById('cal-ev-title').value='';
   calSave();renderCalendario();
 }
@@ -926,6 +1038,7 @@ initSessionUI();renderGM();renderOverview();
 </script>
 </body>
 </html>
+
 
 
 
