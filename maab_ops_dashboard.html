@@ -298,6 +298,7 @@ body.auth-locked .login-ov{display:flex}
       <button class="btn" onclick="openMonthlyReport()"><i class="ti ti-file-spreadsheet"></i>Relatório mensal</button>
       <button class="btn" onclick="exportData()"><i class="ti ti-download"></i>Backup</button>
       <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar</button>
+      <button class="btn" id="sync-btn" onclick="openSyncSettings()" title="Sincronização entre computadores"><i class="ti ti-cloud"></i>Sync</button>
       <button class="btn btn-d" id="undo-import-btn" onclick="undoExcelImport()" title="Voltar ao estado anterior à última importação Excel"><i class="ti ti-arrow-back-up"></i>Desfazer Excel</button>
       <input class="hidden-file" type="file" id="import-file" accept=".json,.xls,.xlsx,.csv,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" onchange="importData(event)">
     </div>
@@ -465,9 +466,11 @@ const AUTH_STORE='maab_auth_v1';
 const THEME_STORE='maab_theme_v1';
 const USER_STORE='maab_users_v1';
 const IMPORT_BACKUP_STORE='maab_import_backup_v1';
+const SYNC_STORE='maab_sync_v1';
+let SYNC_BUSY=false,SYNC_TIMER=null,SYNC_LAST_PULL=0;
 let AUTH=(()=>{try{return JSON.parse(localStorage.getItem(AUTH_STORE)||'null');}catch(e){return null;}})();
 
-function save(){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();}
+function save(skipSync=false){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();if(!skipSync)scheduleCloudPush();}
 function getAM(id){return S.ams.find(a=>a.id===id)||{name:'—',init:'?',color:'#eee',tc:'#888'};}
 function getP(id){return S.projetos.find(p=>p.id===id);}
 function isAuthAdmin(){return AUTH&&AUTH.role==='admin';}
@@ -493,7 +496,7 @@ function loginUser(){const email=normText(document.getElementById('login-email')
 function logoutUser(){AUTH=null;try{localStorage.removeItem(AUTH_STORE);localStorage.removeItem(SESSION_STORE);}catch(e){}SESSION='admin';document.body.classList.add('auth-locked');const p=document.getElementById('login-pass');if(p)p.value='';}
 function requireAuth(){applyTheme();if(!AUTH){document.body.classList.add('auth-locked');return false;}document.body.classList.remove('auth-locked');SESSION=AUTH.role==='admin'?(localStorage.getItem(SESSION_STORE)||'admin'):AUTH.session;return true;}
 function setSession(v){if(!isAuthAdmin())v=AUTH?.session||'admin';SESSION=v||'admin';try{localStorage.setItem(SESSION_STORE,SESSION);}catch(e){}initSessionUI();if(!isAdmin()&&(VIEW==='mercados'||VIEW==='notas'))document.querySelector('[data-view="overview"]').click();else renderView(VIEW);}
-function initSessionUI(){const sel=document.getElementById('session-select');if(!sel)return;const prev=SESSION;if(isAuthAdmin()){sel.disabled=false;sel.innerHTML='<option value="admin">Administrador</option>'+S.ams.map(a=>`<option value="am:${a.id}">${a.name}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===prev)?prev:'admin';SESSION=sel.value;}else{const am=getAM(AUTH?.amId);SESSION=AUTH?.session||'am:'+am.id;sel.innerHTML=`<option value="${SESSION}">${am.name}</option>`;sel.value=SESSION;sel.disabled=true;}const chip=document.getElementById('session-chip');if(chip)chip.textContent=isAdmin()?'acesso total':'visão AM';document.querySelectorAll('[data-view="mercados"],[data-view="notas"]').forEach(b=>b.style.display=isAdmin()?'flex':'none');document.querySelectorAll('button[onclick="openAddAM()"]').forEach(b=>b.style.display=isAuthAdmin()?'inline-flex':'none');const ub=document.getElementById('users-btn');if(ub)ub.style.display=isAuthAdmin()?'flex':'none';const undo=document.getElementById('undo-import-btn');if(undo)undo.style.display=isAuthAdmin()?'inline-flex':'none';}
+function initSessionUI(){const sel=document.getElementById('session-select');if(!sel)return;const prev=SESSION;if(isAuthAdmin()){sel.disabled=false;sel.innerHTML='<option value="admin">Administrador</option>'+S.ams.map(a=>`<option value="am:${a.id}">${a.name}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===prev)?prev:'admin';SESSION=sel.value;}else{const am=getAM(AUTH?.amId);SESSION=AUTH?.session||'am:'+am.id;sel.innerHTML=`<option value="${SESSION}">${am.name}</option>`;sel.value=SESSION;sel.disabled=true;}const chip=document.getElementById('session-chip');if(chip)chip.textContent=isAdmin()?'acesso total':'visão AM';document.querySelectorAll('[data-view="mercados"],[data-view="notas"]').forEach(b=>b.style.display=isAdmin()?'flex':'none');document.querySelectorAll('button[onclick="openAddAM()"]').forEach(b=>b.style.display=isAuthAdmin()?'inline-flex':'none');const ub=document.getElementById('users-btn');if(ub)ub.style.display=isAuthAdmin()?'flex':'none';const undo=document.getElementById('undo-import-btn');if(undo)undo.style.display=isAuthAdmin()?'inline-flex':'none';updateSyncBadge();}
 function tsR(t){const d=Math.floor((Date.now()-t)/1000);if(d<60)return'agora';if(d<3600)return`há ${Math.floor(d/60)}min`;if(d<86400)return`há ${Math.floor(d/3600)}h`;return new Date(t).toLocaleDateString('pt-PT',{day:'numeric',month:'short'});}
 function avH(am,sz=30){return`<div class="av" style="width:${sz}px;height:${sz}px;background:${am.color};color:${am.tc};font-size:${Math.round(sz*.36)}px">${am.init}</div>`;}
 function h(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -524,6 +527,34 @@ function getSearchResults(q){const terms=(q||'').toLowerCase().trim().split(/\s+
 function openSearchResults(){const input=document.getElementById('global-search');const q=input?input.value.trim():'';const hits=getSearchResults(q);const body=!q?'<div style="font-size:13px;color:var(--t3);padding:10px 0">Escreva uma pesquisa para procurar em projetos, clientes, equipa, alertas, tarefas e notas.</div>':hits.length?`<div class="search-results">${hits.map(x=>`<button class="search-hit" onclick="goSearchHit('${x.view}')"><div class="search-hit-top"><i class="ti ${x.icon}" style="font-size:14px;color:var(--t3)"></i><span class="search-hit-type">${h(x.type)}</span></div><div class="search-hit-title">${h(x.title)}</div><div class="search-hit-meta">${h(x.meta)}</div></button>`).join('')}</div>`:'<div style="font-size:13px;color:var(--t3);padding:10px 0">Sem resultados para esta pesquisa.</div>';openModal(`<div class="modal-head"><div class="modal-title">Resultados da pesquisa</div><button class="modal-x" id="m-close"><i class="ti ti-x"></i></button></div>${body}`,null);}
 function goSearchHit(view){closeModal();const btn=document.querySelector(`[data-view="${view}"]`);if(btn)btn.click();}
 function exportData(){const payload={exportedAt:new Date().toISOString(),version:STORE,data:S,calendar:calEvents};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`maab-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+function getSyncConfig(){try{return JSON.parse(localStorage.getItem(SYNC_STORE)||'{}')||{};}catch(e){return{};}}
+function saveSyncConfig(cfg){try{localStorage.setItem(SYNC_STORE,JSON.stringify(cfg||{}));}catch(e){}updateSyncBadge();}
+function syncReady(){const c=getSyncConfig();return !!(c.url&&c.key&&c.id);}
+function syncUrl(path='dashboard_state'){const c=getSyncConfig();return String(c.url||'').replace(/\/+$/,'')+'/rest/v1/'+path;}
+function syncHeaders(extra={}){const c=getSyncConfig();return{'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json',...extra};}
+function updateSyncBadge(){const b=document.getElementById('sync-btn');if(!b)return;const c=getSyncConfig();b.classList.toggle('btn-p',!!(c.url&&c.key&&c.id&&c.auto));b.title=c.url?'Sincronização ligada à base central':'Configurar sincronização central';}
+function cloudPayload(){return{version:STORE,savedAt:Date.now(),data:S,calendar:calEvents};}
+async function cloudFetchState(){const c=getSyncConfig();if(!syncReady())throw new Error('Sync sem configuração');const res=await fetch(syncUrl(`dashboard_state?id=eq.${encodeURIComponent(c.id)}&select=payload,updated_at`),{headers:syncHeaders({'Accept':'application/json'})});if(!res.ok)throw new Error('Não foi possível ler a base central');const rows=await res.json();return rows&&rows[0]?rows[0].payload:null;}
+async function cloudSaveState(){if(!syncReady()||SYNC_BUSY)return;SYNC_BUSY=true;try{const c=getSyncConfig();const body=JSON.stringify({id:c.id,payload:cloudPayload(),updated_at:new Date().toISOString()});const res=await fetch(syncUrl('dashboard_state'),{method:'POST',headers:syncHeaders({'Prefer':'resolution=merge-duplicates'}),body});if(!res.ok)throw new Error('Não foi possível gravar na base central');updateSyncBadge();}finally{SYNC_BUSY=false;}}
+function scheduleCloudPush(){const c=getSyncConfig();if(!c.auto||!syncReady())return;clearTimeout(SYNC_TIMER);SYNC_TIMER=setTimeout(()=>cloudSaveState().catch(e=>console.warn(e)),900);}
+async function pullCloudState(force=false){if(!syncReady())return false;if(Date.now()-SYNC_LAST_PULL<2500&&!force)return false;SYNC_LAST_PULL=Date.now();const payload=await cloudFetchState();if(!payload||!payload.data)return false;const remoteSaved=payload.savedAt||payload.data.lastSaved||0;if(!force&&remoteSaved<=(S.lastSaved||0))return false;S=payload.data;calEvents=Array.isArray(payload.calendar)?payload.calendar:calEvents;if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=[];S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}calSave();initSessionUI();renderView(VIEW);updateCommandStatus();return true;}
+async function pushCloudNow(){try{await cloudSaveState();alert('Dados enviados para a base central.');}catch(e){alert('Não consegui gravar na base central. Confirma URL, chave e tabela.');}}
+async function pullCloudNow(){try{const ok=await pullCloudState(true);alert(ok?'Dados recebidos da base central.':'Não encontrei dados na base central.');}catch(e){alert('Não consegui ler a base central. Confirma URL, chave e tabela.');}}
+function copySyncSQL(){const sql=`create table if not exists dashboard_state (
+  id text primary key,
+  payload jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table dashboard_state enable row level security;
+drop policy if exists "maab_read" on dashboard_state;
+drop policy if exists "maab_write" on dashboard_state;
+create policy "maab_read" on dashboard_state for select using (true);
+create policy "maab_write" on dashboard_state for all using (true) with check (true);`;navigator.clipboard?.writeText(sql);alert('SQL copiado.');}
+function openSyncSettings(){
+  const c=getSyncConfig();
+  openModal(mS('Sincronização central',`<div class="form-row"><label class="form-lbl">Supabase URL</label><input class="form-in" id="sync-url" value="${h(c.url||'')}" placeholder="https://xxxx.supabase.co"></div><div class="form-row"><label class="form-lbl">Anon public key</label><input class="form-in" id="sync-key" value="${h(c.key||'')}" placeholder="eyJ..."></div><div class="form-row"><label class="form-lbl">Base / empresa</label><input class="form-in" id="sync-id" value="${h(c.id||'maab-main')}" placeholder="maab-main"></div><label class="check-item" style="padding-left:0"><span class="chkbox">${c.auto?'<i class="ti ti-check"></i>':''}</span><input id="sync-auto" type="checkbox" ${c.auto?'checked':''} style="display:none"><span class="ch-lbl">Sincronizar automaticamente neste computador</span></label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" onclick="copySyncSQL();event.preventDefault()"><i class="ti ti-copy"></i>Copiar SQL</button><button class="btn" onclick="pushCloudNow();event.preventDefault()"><i class="ti ti-cloud-upload"></i>Enviar agora</button><button class="btn" onclick="pullCloudNow();event.preventDefault()"><i class="ti ti-cloud-download"></i>Receber agora</button></div><div style="font-size:12px;color:var(--t2);line-height:1.45;margin-top:10px">Depois de configurado, todos os computadores que usarem estes dados passam a trabalhar sobre a mesma base central.</div>`),()=>{saveSyncConfig({url:document.getElementById('sync-url').value.trim(),key:document.getElementById('sync-key').value.trim(),id:document.getElementById('sync-id').value.trim()||'maab-main',auto:document.getElementById('sync-auto').checked});closeModal();if(syncReady())pullCloudState(false).catch(e=>console.warn(e));});
+  setTimeout(()=>{const row=document.querySelector('#sync-auto')?.closest('.check-item'),cb=document.getElementById('sync-auto');if(row&&cb)row.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;row.querySelector('.chkbox').innerHTML=cb.checked?'<i class="ti ti-check"></i>':'';}};},40);
+}
 function x(v){return String(v??'').replace(/[<>&'"]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[m]));}
 function xlsCell(v){const n=typeof v==='number'&&isFinite(v);return`<Cell><Data ss:Type="${n?'Number':'String'}">${x(v)}</Data></Cell>`;}
 function xlsSheet(name,rows){return`<Worksheet ss:Name="${x(String(name).slice(0,31))}"><Table>${rows.map(r=>`<Row>${r.map(xlsCell).join('')}</Row>`).join('')}</Table></Worksheet>`;}
@@ -1203,7 +1234,9 @@ function calAddEvent(){
 
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser();});
 document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser();});
-if(requireAuth()){initSessionUI();renderGM();renderOverview();}
+window.addEventListener('focus',()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));});
+setInterval(()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));},30000);
+if(requireAuth()){initSessionUI();renderGM();renderOverview();setTimeout(()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));},700);}
 </script>
 </body>
 </html>
