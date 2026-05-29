@@ -1727,8 +1727,110 @@ function importJuliaCurrentClientMeetings(){
   console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
 }
 // ────────────────────────────────────────────────────────────────────────────
-function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Maíza</h3><p>Importa as reuniões reais da Maíza associadas aos 6 clientes ativos atuais (Altix, Aquecinox, PHF Concept, Madeivouga, Grupo Eleva, Ibernop). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importMaizaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Maíza clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Julia</h3><p>Importa as reuniões reais da Julia associadas aos clientes ativos atuais (SONATURAL, Casual Choose Comercial). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importJuliaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Julia clientes ativos</button></div></div>`;}
+function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Maíza</h3><p>Importa as reuniões reais da Maíza associadas aos 6 clientes ativos atuais (Altix, Aquecinox, PHF Concept, Madeivouga, Grupo Eleva, Ibernop). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importMaizaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Maíza clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Julia</h3><p>Importa as reuniões reais da Julia associadas aos clientes ativos atuais (SONATURAL, Casual Choose Comercial). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importJuliaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Julia clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Ângela</h3><p>Importa as reuniões reais da Ângela associadas aos clientes ativos atuais (INNATAM, Alpine Seafood, Magic Way, SAGIPER). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importAngelaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Ângela clientes ativos</button></div></div>`;}
 
+// ── ÂNGELA — importação de reuniões clientes ativos ──────────────────────────
+const ANGELA_MEETINGS_SOURCE='angela_current_clients_meetings_import';
+const ANGELA_ACTIVE_CLIENTS=['INNATAM','Alpine Seafood','Magic Way','SAGIPER'];
+const angelaMeetingsRaw=[
+  // ── INNATAM ───────────────────────────────────────────────────────────────
+  {account:'Angela',country:'UAE',maabClient:'INNATAM',externalCompany:'ELE Interior Design',date:'25/02/2026',scoreRaw:'4'},
+  {account:'Angela',country:'KSA',maabClient:'INNATAM',externalCompany:'YIH Architects & Consultants',date:'04/03/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'EG',maabClient:'INNATAM',externalCompany:'ConCreative Consultancy',date:'09/03/2026',scoreRaw:'3'},
+  {account:'Angela',country:'Online',maabClient:'INNATAM',externalCompany:'Magic Way',date:'13/03/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'LB',maabClient:'INNATAM',externalCompany:'B2 Consultancy',date:'16/03/2026',scoreRaw:'3'},
+  {account:'Angela',country:'UAE',maabClient:'INNATAM',externalCompany:'PMO Consultancy',date:'17/03/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'MA',maabClient:'INNATAM',externalCompany:'Glorious Groupe',date:'14/04/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'EG',maabClient:'INNATAM',externalCompany:'Jidar Architects',date:'16/04/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'CI',maabClient:'INNATAM',externalCompany:'Sanar Intérieurs',date:'17/04/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'CI',maabClient:'INNATAM',externalCompany:'SKY Architects',date:'29/04/2026',scoreRaw:'4'},
+  {account:'Angela',country:'TN',maabClient:'INNATAM',externalCompany:'Leaders Building',date:'05/05/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'TN',maabClient:'INNATAM',externalCompany:'Leaders Building',date:'06/05/2026',scoreRaw:'3'},
+  {account:'Angela',country:'EG',maabClient:'INNATAM',externalCompany:'ADC - Architecture and Design Consultants',date:'12/05/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'MA',maabClient:'INNATAM',externalCompany:'INZU Smart',date:'13/05/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'EG',maabClient:'INNATAM',externalCompany:'A-Zone Architects',date:'27/05/2026',scoreRaw:'N/A'},
+  // ── ALPINE SEAFOOD ────────────────────────────────────────────────────────
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Truebell',date:'27/03/2026',scoreRaw:'4'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Nord Mile',date:'30/03/2026',scoreRaw:'4'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Seafood Souq',date:'30/03/2026',scoreRaw:'4'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Répertoire Culinaire',date:'09/04/2026',scoreRaw:'3'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Répertoire Culinaire',date:'27/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Chef 2 Chef',date:'27/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'John Dory Seafood',date:'27/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Truebell',date:'27/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Chef Middle East',date:'28/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Seafresh Shop DXB',date:'28/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Reach Food Group',date:'28/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'Transmed',date:'28/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  {account:'Angela',country:'UAE',maabClient:'Alpine Seafood',externalCompany:'SAFCO',date:'29/04/2026',scoreRaw:'N/A (reunião presencial)'},
+  // ── MAGIC WAY ─────────────────────────────────────────────────────────────
+  {account:'Angela',country:'MA',maabClient:'Magic Way',externalCompany:'Riad Les Yeux Bleus',date:'16/04/2026',scoreRaw:'4'},
+  {account:'Angela',country:'TN',maabClient:'Magic Way',externalCompany:'HA Hospitality',date:'06/05/2026',scoreRaw:'4'},
+  {account:'Angela',country:'TN',maabClient:'Magic Way',externalCompany:'Blumar Resort & Spa',date:'07/05/2026',scoreRaw:'3'},
+  {account:'Angela',country:'TN',maabClient:'Magic Way',externalCompany:'Dar Kamy',date:'21/05/2026',scoreRaw:'3'},
+  {account:'Angela',country:'QA',maabClient:'Magic Way',externalCompany:'EMC Live',date:'25/05/2026',scoreRaw:'4'},
+  {account:'Angela',country:'QA',maabClient:'Magic Way',externalCompany:'United Sports Management',date:'26/05/2026',scoreRaw:'4'},
+  // ── SAGIPER ───────────────────────────────────────────────────────────────
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'United C.S.',date:'24/03/2026',scoreRaw:'3'},
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'Object Designs',date:'26/03/2026',scoreRaw:'4'},
+  {account:'Angela',country:'KW',maabClient:'SAGIPER',externalCompany:'MAGNA General Trading Co.',date:'13/04/2026',scoreRaw:'4'},
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'AICON Cotracting and Agencies',date:'17/04/2026',scoreRaw:'3'},
+  {account:'Angela',country:'DZ',maabClient:'SAGIPER',externalCompany:'Groupe des Sociétés Hasnaoui',date:'30/04/2026',scoreRaw:'4'},
+  {account:'Angela',country:'CI',maabClient:'SAGIPER',externalCompany:'EMEBCI Engineering',date:'04/05/2026',scoreRaw:'N/A'},
+  {account:'Angela',country:'DZ',maabClient:'SAGIPER',externalCompany:'ARCHI - DESIGN',date:'06/05/2026',scoreRaw:'N/A (reunião presencial Batimatec)'},
+  {account:'Angela',country:'DZ',maabClient:'SAGIPER',externalCompany:'OM ND Construction et Aménagement',date:'06/05/2026',scoreRaw:'N/A (reunião presencial Batimatec)'},
+  {account:'Angela',country:'TN',maabClient:'SAGIPER',externalCompany:'MCM Déco',date:'11/05/2026',scoreRaw:'2'},
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'Archi-Brands',date:'11/05/2026',scoreRaw:'4'},
+  {account:'Angela',country:'KW',maabClient:'SAGIPER',externalCompany:'T Four Plus',date:'12/05/2026',scoreRaw:'4'},
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'Hassan Allam Holding',date:'12/05/2026',scoreRaw:'2'},
+  {account:'Angela',country:'SN',maabClient:'SAGIPER',externalCompany:'KASARR Holding',date:'14/05/2026',scoreRaw:'3'},
+  {account:'Angela',country:'EG',maabClient:'SAGIPER',externalCompany:'LARA for Buildings Installation Works',date:'18/05/2026',scoreRaw:'4'},
+  {account:'Angela',country:'MA',maabClient:'SAGIPER',externalCompany:'Confomat',date:'19/05/2026',scoreRaw:'4'},
+];
+function normalizeAngelaClientName(name){
+  const v=String(name||'').trim();
+  const map={
+    'Innatam':'INNATAM','innatam':'INNATAM',
+    'Sagiper':'SAGIPER','sagiper':'SAGIPER',
+    'MagicWay':'Magic Way','magicway':'Magic Way','MAGICWAY':'Magic Way'
+  };
+  return map[v]||v;
+}
+function importAngelaCurrentClientMeetings(){
+  if(!isAuthAdmin())return alert('Só o administrador pode executar esta importação.');
+  if(!Array.isArray(S.reunioes))S.reunioes=[];
+  S.reunioes=S.reunioes.filter(m=>m.source!==ANGELA_MEETINGS_SOURCE);
+  const angela=S.ams.find(a=>normText(a.name).includes('angela'));
+  if(!angela)return alert('Account Manager Ângela não encontrado.');
+  const angelaProjects=S.projetos.filter(p=>p.amId===angela.id);
+  const now=new Date().toISOString();
+  const filtered=angelaMeetingsRaw.filter(row=>ANGELA_ACTIVE_CLIENTS.includes(normalizeAngelaClientName(row.maabClient)));
+  const normalized=filtered.map((row,i)=>{
+    const iso=_parsePortDate(row.date);
+    const client=normalizeAngelaClientName(row.maabClient);
+    const proj=angelaProjects.find(p=>normText(p.cliente||p.nome)===normText(client));
+    return{
+      id:`meeting-angela-current-${String(i+1).padStart(3,'0')}`,
+      projetoId:proj?proj.id:undefined,
+      amId:angela.id,maabClient:client,account:'Angela',
+      data:iso,hora:'',status:_meetStatusFromDate(iso),
+      company:String(row.externalCompany||'').trim(),arabClient:String(row.externalCompany||'').trim(),
+      contact:'',country:String(row.country||'').trim(),sector:'',
+      meetingType:_maizaMeetType(row),score:_maizaScoreFromRaw(row.scoreRaw),
+      scoreRaw:String(row.scoreRaw||'').trim(),
+      summary:'',nota:_davidNotesFromScoreRaw(row.scoreRaw),proximo:'',
+      followUpDate:'',followupNotes:'',followUpStatus:'N/A',
+      titulo:`Reunião · ${client} · ${String(row.externalCompany||'').trim()}`,
+      source:ANGELA_MEETINGS_SOURCE,createdBy:'Angela',createdAt:now,updatedAt:now
+    };
+  });
+  S.reunioes=S.reunioes.concat(normalized);
+  save();renderView(VIEW);
+  showToast(`${normalized.length} reuniões reais dos clientes ativos da Ângela importadas com sucesso.`);
+  console.log('Ângela current clients meetings:',normalized.length);
+  console.assert(normalized.every(m=>ANGELA_ACTIVE_CLIENTS.includes(m.maabClient)),'Meetings outside Ângela active portfolio detected');
+  console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
+}
 let VIEW='dashboard';
 function showView(v){
   document.querySelectorAll('.view').forEach(view=>{view.classList.remove('active');});
