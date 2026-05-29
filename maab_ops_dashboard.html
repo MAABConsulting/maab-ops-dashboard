@@ -1474,8 +1474,186 @@ function importHenriqueCurrentClientMeetings(){
   console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
   console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
 }
+
+// ── MAÍZA — importação de reuniões clientes ativos ───────────────────────────
+const MAIZA_MEETINGS_SOURCE='maiza_current_clients_meetings_import';
+const MAIZA_ACTIVE_CLIENTS=['Altix','Aquecinox','PHF Concept','Madeivouga','Grupo Eleva','Ibernop'];
+const maizaMeetingsRaw=[
+  // ── ALTIX ────────────────────────────────────────────────────────────────
+  {account:'Maíza',country:'EG',maabClient:'Altix',externalCompany:'MAM Electric',date:'01/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'EG',maabClient:'Altix',externalCompany:'ANNCO',date:'13/01/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KW',maabClient:'Altix',externalCompany:'Al Jassar',date:'29/01/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'OM',maabClient:'Altix',externalCompany:'FTS',date:'02/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'Altix',externalCompany:'Power Center',date:'11/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'EGT',maabClient:'Altix',externalCompany:'Egyptian Canadian Group',date:'12/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'MOLDYN TECHNICAL PLASTICS',date:'24/02/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'Sofimed',date:'03/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'INGEMEC',date:'10/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'RDS',date:'11/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'World Class',date:'17/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'CISMEKA',date:'18/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'CBE Maroc',date:'24/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'UAE',maabClient:'Altix',externalCompany:'EquiPro',date:'02/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'IPENG',date:'06/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'Cismeka',date:'30/04/2026',scoreRaw:'Follow up'},
+  {account:'Maíza',country:'DZ',maabClient:'Altix',externalCompany:'ENIEM',date:'30/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Altix',externalCompany:'ATG Maroc',date:'11/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'TN',maabClient:'Altix',externalCompany:'B4Creation Group',date:'11/05/2026',scoreRaw:'N/A'},
+  // ── AQUECINOX ────────────────────────────────────────────────────────────
+  {account:'Maíza',country:'KSA',maabClient:'Aquecinox',externalCompany:'Pure Seasons',date:'13/01/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'KSA',maabClient:'Aquecinox',externalCompany:'Nesma Partners',date:'15/01/2026',scoreRaw:'2'},
+  {account:'Maíza',country:'UAE',maabClient:'Aquecinox',externalCompany:'Zenith',date:'21/01/2025',scoreRaw:'N/A'},
+  {account:'Maíza',country:'KSA',maabClient:'Aquecinox',externalCompany:'SaudiBoilers',date:'28/01/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'BH',maabClient:'Aquecinox',externalCompany:'Yateem Air Conditioning',date:'18/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'BH',maabClient:'Aquecinox',externalCompany:'Heat Master International',date:'19/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KW',maabClient:'Aquecinox',externalCompany:'Kuwait Heat Transfer',date:'23/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'Aquecinox',externalCompany:'Mahy Koory',date:'26/02/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'QA',maabClient:'Aquecinox',externalCompany:'Qad-Net',date:'04/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'QA',maabClient:'Aquecinox',externalCompany:'GASCO',date:'09/03/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'QA',maabClient:'Aquecinox',externalCompany:'Leminar',date:'10/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KW',maabClient:'Aquecinox',externalCompany:'United Gulf Construction',date:'17/03/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'IMS',date:'02/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'EGT',maabClient:'Aquecinox',externalCompany:'Badr and Asfour Company',date:'07/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'EGT',maabClient:'Aquecinox',externalCompany:'Heatec',date:'08/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'Tareqix',date:'08/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'UAE',maabClient:'Aquecinox',externalCompany:'Energy Tech Prime',date:'13/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'DZ',maabClient:'Aquecinox',externalCompany:'C&H ENERGY SARL',date:'20/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'DZ',maabClient:'Aquecinox',externalCompany:'WILO',date:'23/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'DZ',maabClient:'Aquecinox',externalCompany:'SARL BUILDING FLUID ENGINEERING',date:'27/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'Aquecinox',externalCompany:'Energy Tech Prime',date:'11/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'Oman Seven Star',date:'19/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'Elite Global Trading',date:'21/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'Al Kazem',date:'25/05/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'OM',maabClient:'Aquecinox',externalCompany:'Majees',date:'26/05/2026',scoreRaw:'N/A'},
+  // ── PHF CONCEPT ───────────────────────────────────────────────────────────
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Hi-Best',date:'09/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Group AMANA',date:'11/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'RAC',date:'18/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'PHF Concept',externalCompany:'Tekzone Industrial',date:'25/02/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'EG',maabClient:'PHF Concept',externalCompany:'Dar Al-Alamia',date:'26/02/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'EG',maabClient:'PHF Concept',externalCompany:'REDCON',date:'05/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'QA',maabClient:'PHF Concept',externalCompany:'UCC Holding',date:'12/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'MA',maabClient:'PHF Concept',externalCompany:'MACOBATE',date:'17/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Dawaer Alsharq',date:'24/03/2026',scoreRaw:'2'},
+  {account:'Maíza',country:'EG',maabClient:'PHF Concept',externalCompany:'EGEC',date:'24/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'PHF Concept',externalCompany:'Target',date:'31/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'MOBCO Group',date:'31/03/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'SAS Construction & Contracting',date:'08/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Buna Holding',date:'09/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'EGT',maabClient:'PHF Concept',externalCompany:'GIECO',date:'16/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Al-Othman Holding Company',date:'21/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'MA',maabClient:'PHF Concept',externalCompany:'Artelia Maroc',date:'21/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Saudi Icon',date:'22/04/2026',scoreRaw:'2'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'RAS Ambition International',date:'28/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'SICC',date:'28/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'Al Amara International',date:'04/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'PHF Concept',externalCompany:'Tecfides',date:'12/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'PHF Concept',externalCompany:'BAUMAT',date:'13/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'QA',maabClient:'PHF Concept',externalCompany:'MACE',date:'21/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'QA',maabClient:'PHF Concept',externalCompany:'MEC',date:'26/05/2026',scoreRaw:'4'},
+  // ── MADEIVOUGA ───────────────────────────────────────────────────────────
+  {account:'Maíza',country:'KSA',maabClient:'Madeivouga',externalCompany:'Havelock One Interiors',date:'11/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'OM',maabClient:'Madeivouga',externalCompany:'Asiya Fit-out',date:'18/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'Madeivouga',externalCompany:'One Dimension',date:'26/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'KSA',maabClient:'Madeivouga',externalCompany:'Alkayan Decor',date:'30/03/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'Madeivouga',externalCompany:'Albaraka Wood',date:'02/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'UAE',maabClient:'Madeivouga',externalCompany:'SpaceWell',date:'08/04/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'UAE',maabClient:'Madeivouga',externalCompany:'Hammer and Heart',date:'09/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'Jkan Interior',date:'14/04/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'UAE',maabClient:'Madeivouga',externalCompany:'FitOut Bureau Interiors',date:'16/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'iSpaceInteriors',date:'27/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'EasyPorta Global',date:'30/04/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'Alnabil Construction',date:'11/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'Woodstyles',date:'12/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'Mild Designs',date:'14/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'NG',maabClient:'Madeivouga',externalCompany:'DOJ Contractors',date:'14/05/2026',scoreRaw:'3'},
+  {account:'Maíza',country:'SN',maabClient:'Madeivouga',externalCompany:'CICA',date:'19/05/2026',scoreRaw:'4'},
+  // ── IBERNOP ───────────────────────────────────────────────────────────────
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Atlas Veterinaire',date:'20/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Groupe Ouakkaha',date:'21/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Academie D\'Agriculture D\'Afrique',date:'21/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Centre Régional d\'Investissement Marrakech-Safi',date:'21/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'LIAV',date:'21/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Laboratoires Nilys',date:'22/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'FirmaPro',date:'22/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'VitGroup',date:'22/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Adams Vetraceuticals',date:'23/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'NovoVet',date:'23/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'AIHM',date:'23/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'GalaxyLab',date:'23/04/2026',scoreRaw:'N/A (reunião presencial na SIAM)'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'L\'Académie d\'Agriculture d\'Afrique',date:'12/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'KSA',maabClient:'Ibernop',externalCompany:'Requia',date:'13/05/2026',scoreRaw:'4'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Mohammed Bouslikhane',date:'18/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'MA',maabClient:'Ibernop',externalCompany:'Zaari Abdelhadi',date:'25/05/2026',scoreRaw:'N/A'},
+  // ── GRUPO ELEVA ───────────────────────────────────────────────────────────
+  {account:'Maíza',country:'SN',maabClient:'Grupo Eleva',externalCompany:'Holding Willix',date:'20/05/2026',scoreRaw:'N/A'},
+  {account:'Maíza',country:'DZ',maabClient:'Grupo Eleva',externalCompany:'Abderrezak',date:'20/05/2026',scoreRaw:'N/A'},
+];
+function normalizeMaizaClientName(name){
+  const v=String(name||'').trim();
+  const map={
+    'PHF':'PHF Concept','phf':'PHF Concept',
+    'IBERNOP':'Ibernop','ibernop':'Ibernop',
+    'Grupo Eleva (MundiModulo)':'Grupo Eleva','GRUPO ELEVA':'Grupo Eleva',
+    'ALTIX':'Altix','AQUECINOX':'Aquecinox','MADEIVOUGA':'Madeivouga'
+  };
+  return map[v]||v;
+}
+function _maizaMeetType(row){
+  const co=String(row.externalCompany||'').toLowerCase();
+  const sc=String(row.scoreRaw||'').toLowerCase();
+  if(/\bfu\b/.test(sc)||sc.includes('follow'))return'Follow-up';
+  if(sc.includes('presencial')||sc.includes('siam'))return'Reunião presencial';
+  if(sc.includes('missão')||sc.includes('missao')||sc.includes('empresarial'))return'Missão empresarial';
+  if(/\bfu\b/.test(co)||co.includes('follow'))return'Follow-up';
+  return'Reunião comercial';
+}
+function _maizaScoreFromRaw(raw){
+  const v=Number(String(raw||'').trim());
+  return Number.isFinite(v)&&v>=1&&v<=5?v:0;
+}
+function importMaizaCurrentClientMeetings(){
+  if(!isAuthAdmin())return alert('Só o administrador pode executar esta importação.');
+  if(!Array.isArray(S.reunioes))S.reunioes=[];
+  S.reunioes=S.reunioes.filter(m=>m.source!==MAIZA_MEETINGS_SOURCE);
+  const maiza=S.ams.find(a=>normText(a.name).includes('maiz'));
+  if(!maiza)return alert('Account Manager Maíza não encontrado.');
+  const maizaProjects=S.projetos.filter(p=>p.amId===maiza.id);
+  const now=new Date().toISOString();
+  const filtered=maizaMeetingsRaw.filter(row=>{
+    const cli=normalizeMaizaClientName(row.maabClient);
+    return MAIZA_ACTIVE_CLIENTS.includes(cli);
+  });
+  const normalized=filtered.map((row,i)=>{
+    const iso=_parsePortDate(row.date);
+    const score=_maizaScoreFromRaw(row.scoreRaw);
+    const client=normalizeMaizaClientName(row.maabClient);
+    const proj=maizaProjects.find(p=>normText(p.cliente||p.nome)===normText(client));
+    const extraNote=_davidNotesFromScoreRaw(row.scoreRaw);
+    return{
+      id:`meeting-maiza-current-${String(i+1).padStart(3,'0')}`,
+      projetoId:proj?proj.id:undefined,
+      amId:maiza.id,maabClient:client,account:'Maiza',
+      data:iso,hora:'',status:_meetStatusFromDate(iso),
+      company:String(row.externalCompany||'').trim(),arabClient:String(row.externalCompany||'').trim(),
+      contact:'',country:String(row.country||'').trim(),sector:'',
+      meetingType:_maizaMeetType(row),score,scoreRaw:String(row.scoreRaw||'').trim(),
+      summary:'',nota:extraNote,proximo:'',
+      followUpDate:'',followupNotes:'',followUpStatus:'N/A',
+      titulo:`Reunião · ${client} · ${String(row.externalCompany||'').trim()}`,
+      source:MAIZA_MEETINGS_SOURCE,createdBy:'Maiza',createdAt:now,updatedAt:now
+    };
+  });
+  S.reunioes=S.reunioes.concat(normalized);
+  save();renderView(VIEW);
+  showToast(`${normalized.length} reuniões reais dos clientes ativos da Maíza importadas com sucesso.`);
+  console.log('Maíza current clients meetings:',normalized.length);
+  console.assert(normalized.every(m=>MAIZA_ACTIVE_CLIENTS.includes(m.maabClient)),'Meetings outside Maíza active portfolio detected');
+  console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
+  console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
+}
 // ────────────────────────────────────────────────────────────────────────────
-function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div></div>`;}
+function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Maíza</h3><p>Importa as reuniões reais da Maíza associadas aos 6 clientes ativos atuais (Altix, Aquecinox, PHF Concept, Madeivouga, Grupo Eleva, Ibernop). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importMaizaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Maíza clientes ativos</button></div></div>`;}
 
 let VIEW='dashboard';
 function showView(v){
