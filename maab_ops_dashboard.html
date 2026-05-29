@@ -1411,8 +1411,71 @@ function importDavidCurrentClientMeetings(){
   console.assert(normalized.every(m=>DAVID_ACTIVE_CLIENTS.includes(m.maabClient)),'There are meetings linked to clients outside David\'s current active portfolio');
   console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
 }
+// ── HENRIQUE — importação de reuniões clientes ativos ────────────────────────
+const HENRIQUE_MEETINGS_SOURCE='henrique_current_clients_meetings_import';
+const HENRIQUE_ACTIVE_CLIENTS=['Tecnifreza','Conformetal','Braver / _finalversion'];
+const henriqueMeetingsRaw=[
+  {account:'Henrique',country:'DZ',maabClient:'Conformetal',externalCompany:'Ezio Design',date:'06/05/2026',scoreRaw:'4'},
+  {account:'Henrique',country:'MA',maabClient:'Braver / _finalversion',externalCompany:'Lafarge Holcim',date:'13/05/2026',scoreRaw:'4'},
+  {account:'Henrique',country:'QA',maabClient:'Braver / _finalversion',externalCompany:'Al Obdeily',date:'14/05/2026',scoreRaw:'4'},
+  {account:'Henrique',country:'QA',maabClient:'Tecnifreza',externalCompany:'QLife',date:'18/05/2026',scoreRaw:'3'},
+  {account:'Henrique',country:'SN',maabClient:'Conformetal',externalCompany:'CICA',date:'19/05/2026',scoreRaw:'N/A'},
+  {account:'Henrique',country:'EG',maabClient:'Tecnifreza',externalCompany:'Mascomid',date:'21/05/2026',scoreRaw:'4'},
+  {account:'Henrique',country:'UAE',maabClient:'Tecnifreza',externalCompany:'Aalmir Plastic Industries',date:'25/05/2026',scoreRaw:'2'},
+];
+function normalizeHenriqueClientName(name){
+  const v=String(name||'').trim();
+  const map={
+    'Final Version':'Braver / _finalversion','final version':'Braver / _finalversion',
+    'FINAL VERSION':'Braver / _finalversion','_finalversion':'Braver / _finalversion',
+    'Confometal':'Conformetal','CONFORMETAL':'Conformetal','conformetal':'Conformetal',
+    'TECNIFREZA':'Tecnifreza','tecnifreza':'Tecnifreza'
+  };
+  return map[v]||v;
+}
+function importHenriqueCurrentClientMeetings(){
+  if(!isAuthAdmin())return alert('Só o administrador pode executar esta importação.');
+  if(!Array.isArray(S.reunioes))S.reunioes=[];
+  S.reunioes=S.reunioes.filter(m=>m.source!==HENRIQUE_MEETINGS_SOURCE);
+  const henrique=S.ams.find(a=>normText(a.name)==='henrique');
+  if(!henrique)return alert('Account Manager Henrique não encontrado.');
+  const henriqueProjects=S.projetos.filter(p=>p.amId===henrique.id);
+  const now=new Date().toISOString();
+  const filtered=henriqueMeetingsRaw.filter(row=>{
+    const acc=String(row.account||'').trim();
+    const cli=normalizeHenriqueClientName(row.maabClient);
+    return acc==='Henrique'&&HENRIQUE_ACTIVE_CLIENTS.includes(cli);
+  });
+  const normalized=filtered.map((row,i)=>{
+    const iso=_parsePortDate(row.date);
+    const score=_davidMeetScoreFromRaw(row.scoreRaw);
+    const client=normalizeHenriqueClientName(row.maabClient);
+    const proj=henriqueProjects.find(p=>normText(p.cliente||p.nome)===normText(client));
+    const extraNote=_davidNotesFromScoreRaw(row.scoreRaw);
+    return{
+      id:`meeting-henrique-current-${String(i+1).padStart(3,'0')}`,
+      projetoId:proj?proj.id:undefined,
+      amId:henrique.id,maabClient:client,account:'Henrique',
+      data:iso,hora:'',status:_meetStatusFromDate(iso),
+      company:String(row.externalCompany||'').trim(),arabClient:String(row.externalCompany||'').trim(),
+      contact:'',country:String(row.country||'').trim(),sector:'',
+      meetingType:_davidMeetType(row),score,scoreRaw:String(row.scoreRaw||'').trim(),
+      summary:'',nota:extraNote,proximo:'',
+      followUpDate:'',followupNotes:'',followUpStatus:'N/A',
+      titulo:`Reunião · ${client} · ${String(row.externalCompany||'').trim()}`,
+      source:HENRIQUE_MEETINGS_SOURCE,createdBy:'Henrique',createdAt:now,updatedAt:now
+    };
+  });
+  S.reunioes=S.reunioes.concat(normalized);
+  save();renderView(VIEW);
+  showToast(`${normalized.length} reuniões reais dos clientes ativos do Henrique importadas com sucesso.`);
+  console.log('Henrique current clients meetings:',normalized.length);
+  console.assert(normalized.every(m=>HENRIQUE_ACTIVE_CLIENTS.includes(m.maabClient)),'Meetings outside Henrique active portfolio detected');
+  console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
+  console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
+}
 // ────────────────────────────────────────────────────────────────────────────
-function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div></div>`;}
+function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div></div>`;}
 
 let VIEW='dashboard';
 function showView(v){
