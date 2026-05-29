@@ -1652,8 +1652,82 @@ function importMaizaCurrentClientMeetings(){
   console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
   console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
 }
+// ── JULIA — importação de reuniões clientes ativos ───────────────────────────
+const JULIA_MEETINGS_SOURCE='julia_current_clients_meetings_import';
+const JULIA_ACTIVE_CLIENTS=['SONATURAL','CASUAL CHOOSE COMERCIAL'];
+const juliaMeetingsRaw=[
+  // ── SONATURAL ────────────────────────────────────────────────────────────
+  {account:'Julia',country:'SA',maabClient:'SONATURAL',externalCompany:'Rawasi Group',date:'01/12/2026',scoreRaw:'3'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'JK Group',date:'05/02/2026',scoreRaw:'4'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Spinneys',date:'09/02/2026',scoreRaw:'4'},
+  {account:'Julia',country:'MA',maabClient:'SONATURAL',externalCompany:'Label VIe',date:'10/02/2026',scoreRaw:'N/A'},
+  {account:'Julia',country:'SA',maabClient:'SONATURAL',externalCompany:'HWS',date:'16/02/2026',scoreRaw:'3'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Health Choice',date:'04/03/2026',scoreRaw:'2'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Delta Foods Industry',date:'05/03/2026',scoreRaw:'4'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Cart Supermarket',date:'10/03/2026',scoreRaw:'3'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Choithrams',date:'11/03/2026',scoreRaw:'3'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Bidfood',date:'17/03/2026',scoreRaw:'4'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Majid Al Futtaim',date:'24/04/2026',scoreRaw:'2'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'WL Food Marketing Service',date:'27/04/2026',scoreRaw:'4'},
+  {account:'Julia',country:'UAE',maabClient:'SONATURAL',externalCompany:'Bayara',date:'06/05/2026',scoreRaw:'4'},
+  {account:'Julia',country:'SA',maabClient:'SONATURAL',externalCompany:'Bid Food KSA',date:'13/05/2026',scoreRaw:'4'},
+  {account:'Julia',country:'BH',maabClient:'SONATURAL',externalCompany:'Alkuwaiti Group',date:'20/05/2026',scoreRaw:'3'},
+  {account:'Julia',country:'MA',maabClient:'SONATURAL',externalCompany:'Food Group Trading',date:'20/05/2026',scoreRaw:'2'},
+  {account:'Julia',country:'MA',maabClient:'SONATURAL',externalCompany:'Label Vie',date:'26/05/2026',scoreRaw:'4'},
+  // ── CASUAL CHOOSE COMERCIAL ───────────────────────────────────────────────
+  {account:'Julia',country:'UAE',maabClient:'CASUAL CHOOSE COMERCIAL',externalCompany:'Alyasra Fashion',date:'05/05/2026',scoreRaw:'3'},
+  {account:'Julia',country:'SA',maabClient:'CASUAL CHOOSE COMERCIAL',externalCompany:'Almoallim United',date:'06/05/2026',scoreRaw:'3'},
+  {account:'Julia',country:'UAE',maabClient:'CASUAL CHOOSE COMERCIAL',externalCompany:'House of Ballerinas',date:'14/05/2026',scoreRaw:'N/A'},
+  {account:'Julia',country:'UAE',maabClient:'CASUAL CHOOSE COMERCIAL',externalCompany:'Fair Trading International',date:'21/05/2026',scoreRaw:'3'},
+  {account:'Julia',country:'SA',maabClient:'CASUAL CHOOSE COMERCIAL',externalCompany:'Next Sourcing Limited',date:'25/05/2026',scoreRaw:'3'},
+];
+function normalizeJuliaClientName(name){
+  const v=String(name||'').trim();
+  const map={
+    'Casual Choose':'CASUAL CHOOSE COMERCIAL','CASUAL CHOOSE':'CASUAL CHOOSE COMERCIAL',
+    'casual choose':'CASUAL CHOOSE COMERCIAL','Casual choose':'CASUAL CHOOSE COMERCIAL',
+    'sonatural':'SONATURAL'
+  };
+  return map[v]||v;
+}
+function importJuliaCurrentClientMeetings(){
+  if(!isAuthAdmin())return alert('Só o administrador pode executar esta importação.');
+  if(!Array.isArray(S.reunioes))S.reunioes=[];
+  S.reunioes=S.reunioes.filter(m=>m.source!==JULIA_MEETINGS_SOURCE);
+  const julia=S.ams.find(a=>normText(a.name)==='julia');
+  if(!julia)return alert('Account Manager Julia não encontrado.');
+  const juliaProjects=S.projetos.filter(p=>p.amId===julia.id);
+  const now=new Date().toISOString();
+  const filtered=juliaMeetingsRaw.filter(row=>JULIA_ACTIVE_CLIENTS.includes(normalizeJuliaClientName(row.maabClient)));
+  const normalized=filtered.map((row,i)=>{
+    const iso=_parsePortDate(row.date);
+    const client=normalizeJuliaClientName(row.maabClient);
+    const proj=juliaProjects.find(p=>normText(p.cliente||p.nome)===normText(client));
+    return{
+      id:`meeting-julia-current-${String(i+1).padStart(3,'0')}`,
+      projetoId:proj?proj.id:undefined,
+      amId:julia.id,maabClient:client,account:'Julia',
+      data:iso,hora:'',status:_meetStatusFromDate(iso),
+      company:String(row.externalCompany||'').trim(),arabClient:String(row.externalCompany||'').trim(),
+      contact:'',country:String(row.country||'').trim(),sector:'',
+      meetingType:_maizaMeetType(row),score:_maizaScoreFromRaw(row.scoreRaw),
+      scoreRaw:String(row.scoreRaw||'').trim(),
+      summary:'',nota:_davidNotesFromScoreRaw(row.scoreRaw),proximo:'',
+      followUpDate:'',followupNotes:'',followUpStatus:'N/A',
+      titulo:`Reunião · ${client} · ${String(row.externalCompany||'').trim()}`,
+      source:JULIA_MEETINGS_SOURCE,createdBy:'Julia',createdAt:now,updatedAt:now
+    };
+  });
+  S.reunioes=S.reunioes.concat(normalized);
+  save();renderView(VIEW);
+  showToast(`${normalized.length} reuniões reais dos clientes ativos da Julia importadas com sucesso.`);
+  console.log('Julia current clients meetings:',normalized.length);
+  console.assert(normalized.every(m=>JULIA_ACTIVE_CLIENTS.includes(m.maabClient)),'Meetings outside Julia active portfolio detected');
+  console.assert(S.reunioes.some(m=>m.account==='Allen'),'Allen meetings should not be removed');
+  console.assert(S.reunioes.some(m=>m.account==='David'),'David meetings should not be removed');
+}
 // ────────────────────────────────────────────────────────────────────────────
-function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Maíza</h3><p>Importa as reuniões reais da Maíza associadas aos 6 clientes ativos atuais (Altix, Aquecinox, PHF Concept, Madeivouga, Grupo Eleva, Ibernop). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importMaizaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Maíza clientes ativos</button></div></div>`;}
+function renderSettings(){const root=document.getElementById('settings-root');if(!root)return;const c=getSyncConfig();root.innerHTML=`<div class="settings-grid"><div class="settings-card"><h3>Backup e importação</h3><p>Exporta uma cópia JSON da plataforma ou importa ficheiros atualizados.</p><button class="btn btn-p" onclick="exportData()"><i class="ti ti-download"></i>Baixar backup</button> <button class="btn" onclick="document.getElementById('import-file').click()"><i class="ti ti-upload"></i>Importar dados</button> <button class="btn btn-d" onclick="resetDemoAndImportReal()"><i class="ti ti-database-import"></i>Resetar dados demo e importar MAAB real</button></div><div class="settings-card"><h3>Sync central</h3><p>${c.auto&&syncReady()?'Sincronização automática ativa neste computador.':'Configura Supabase e ativa a sincronização automática.'}</p><button class="btn btn-p" onclick="openSyncSettings()"><i class="ti ti-cloud"></i>Abrir Sync</button> <button class="btn" onclick="pullCloudNow()"><i class="ti ti-cloud-download"></i>Receber agora</button> <button class="btn" onclick="pushCloudNow()"><i class="ti ti-cloud-upload"></i>Enviar agora</button></div><div class="settings-card"><h3>Calendário e Teams</h3><p>Calendário interno por account. Sincronização Microsoft/Teams requer configuração externa; por agora use exportação interna.</p><button class="btn" onclick="downloadCalendarICS()"><i class="ti ti-calendar-export"></i>Exportar .ics</button></div><div class="settings-card"><h3>Acessos</h3><p>Cria acessos, exclui antigos e controla que páginas cada pessoa pode visualizar.</p><button class="btn btn-p" onclick="openUserSettings()"><i class="ti ti-users-cog"></i>Gerir acessos</button></div><div class="settings-card"><h3>Importação de reuniões — Allen</h3><p>Importa as reuniões reais do Allen associadas aos 6 clientes ativos atuais. Remove importações anteriores com a mesma origem e mantém reuniões manuais.</p><button class="btn btn-p" onclick="importAllenCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Allen clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — David</h3><p>Importa as reuniões reais do David associadas aos 6 clientes ativos atuais (Core Concept, Genan, Garsteel, Singula, Pavinorte, TOPECA). Remove importações anteriores com a mesma origem e mantém reuniões do Allen e manuais.</p><button class="btn btn-p" onclick="importDavidCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — David clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Henrique</h3><p>Importa as reuniões reais do Henrique associadas aos clientes ativos atuais (Tecnifreza, Conformetal, Braver / _finalversion). Mantém reuniões do Allen e David.</p><button class="btn btn-p" onclick="importHenriqueCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Henrique clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Maíza</h3><p>Importa as reuniões reais da Maíza associadas aos 6 clientes ativos atuais (Altix, Aquecinox, PHF Concept, Madeivouga, Grupo Eleva, Ibernop). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importMaizaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Maíza clientes ativos</button></div><div class="settings-card"><h3>Importação de reuniões — Julia</h3><p>Importa as reuniões reais da Julia associadas aos clientes ativos atuais (SONATURAL, Casual Choose Comercial). Mantém reuniões dos outros accounts.</p><button class="btn btn-p" onclick="importJuliaCurrentClientMeetings()"><i class="ti ti-database-import"></i>Importar reuniões reais — Julia clientes ativos</button></div></div>`;}
 
 let VIEW='dashboard';
 function showView(v){
