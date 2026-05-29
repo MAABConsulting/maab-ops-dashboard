@@ -1177,11 +1177,158 @@ function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.
 const DAVID_MEETINGS_SOURCE='david_current_clients_meetings_import';
 const DAVID_ACTIVE_CLIENTS=['Core Concept','Genan','Garsteel','Singula','Pavinorte','TOPECA'];
 const davidMeetingsRaw=[
-  // Colar aqui os dados reais do David (objetos com: account, country, maabClient, externalCompany, date, scoreRaw)
+  // ── GENAN ────────────────────────────────────────────────────────────────
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'MangoSports',date:'01/08/2026',scoreRaw:'3'},
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'Holding Willix',date:'20/01/2025',scoreRaw:'Presencial'},
+  {account:'David',country:'DZ',maabClient:'Genan',externalCompany:'Teslia',date:'21/01/2025',scoreRaw:'4'},
+  {account:'David',country:'EG',maabClient:'Genan',externalCompany:'Hoppec',date:'30/01/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'Genan',externalCompany:'Tapidor',date:'03/02/2026',scoreRaw:'4'},
+  {account:'David',country:'BH',maabClient:'Genan',externalCompany:'ERAM Floors',date:'04/02/2026',scoreRaw:'4'},
+  {account:'David',country:'QA',maabClient:'Genan',externalCompany:'Stadia',date:'05/02/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'Genan',externalCompany:'Encore',date:'09/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Realturf',date:'12/03/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'LGSC',date:'17/03/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'Pro turf',date:'24/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Valtech',date:'01/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Newmann International',date:'02/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'EGT',maabClient:'Genan',externalCompany:'Royalverd',date:'02/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'EGT',maabClient:'Genan',externalCompany:'Idea Sports',date:'07/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'2MD Foot',date:'09/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Sports Unica',date:'15/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Pro Turf',date:'05/05/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'Genan',externalCompany:'Holding willix',date:'08/05/2026',scoreRaw:'4'},
+  {account:'David',country:'KE',maabClient:'Genan',externalCompany:'Courtstech',date:'12/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Pro Turf',date:'14/05/2026',scoreRaw:'Missão Empresarial'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Unica Sport',date:'14/05/2026',scoreRaw:'Missão Empresarial'},
+  {account:'David',country:'MA',maabClient:'Genan',externalCompany:'Valtech',date:'14/05/2026',scoreRaw:'Missão Empresarial'},
+  {account:'David',country:'KE',maabClient:'Genan',externalCompany:'Courtstech',date:'15/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'EG',maabClient:'Genan',externalCompany:'Arab Contractors',date:'18/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'KE',maabClient:'Genan',externalCompany:'Tokimo',date:'26/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'KE',maabClient:'Genan',externalCompany:'Turfken',date:'27/05/2026',scoreRaw:'N/A'},
+  // ── CORE CONCEPT ─────────────────────────────────────────────────────────
+  {account:'David',country:'BR',maabClient:'Core Concept',externalCompany:'PSA Arquitetura',date:'13/01/2026',scoreRaw:'N/A'},
+  {account:'David',country:'BR',maabClient:'Core Concept',externalCompany:'STarq Arquitetura',date:'16/01/2026',scoreRaw:'4'},
+  {account:'David',country:'BR',maabClient:'Core Concept',externalCompany:'ACR Arquitetos Associados',date:'16/01/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SN',maabClient:'Core Concept',externalCompany:'Holding Willix',date:'20/01/2025',scoreRaw:'Presencial'},
+  {account:'David',country:'CI',maabClient:'Core Concept',externalCompany:'BAOBAB Architects',date:'21/01/2025',scoreRaw:'N/A'},
+  {account:'David',country:'CI',maabClient:'Core Concept',externalCompany:'Superlimão',date:'21/01/2025',scoreRaw:'4'},
+  {account:'David',country:'CI',maabClient:'Core Concept',externalCompany:'Bacco Arquitetos Associados',date:'21/01/2025',scoreRaw:'N/A'},
+  {account:'David',country:'OM',maabClient:'Core Concept',externalCompany:'Espace Engineering Consultants',date:'27/01/2026',scoreRaw:'4'},
+  {account:'David',country:'JO',maabClient:'Core Concept',externalCompany:'Sanabel Landscape Architecture',date:'29/01/2026',scoreRaw:'4'},
+  {account:'David',country:'OM',maabClient:'Core Concept',externalCompany:'OryxArch',date:'04/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'GE',maabClient:'Core Concept',externalCompany:'Giorgi Zangaladze',date:'10/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'JO',maabClient:'Core Concept',externalCompany:'Adaa',date:'18/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CO',maabClient:'Core Concept',externalCompany:'Colombia Bim Consulting',date:'24/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'Lime design Lab',date:'25/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CO',maabClient:'Core Concept',externalCompany:'FB Architects',date:'26/02/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CL',maabClient:'Core Concept',externalCompany:'Passiva',date:'02/03/2026',scoreRaw:'N/A'},
+  {account:'David',country:'JO',maabClient:'Core Concept',externalCompany:'Seen architects',date:'04/03/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CO',maabClient:'Core Concept',externalCompany:'Colombia Bim Consulting',date:'05/03/2026',scoreRaw:'4'},
+  {account:'David',country:'JO',maabClient:'Core Concept',externalCompany:'FB Architects',date:'10/03/2026',scoreRaw:'4'},
+  {account:'David',country:'JO',maabClient:'Core Concept',externalCompany:'Farah Architects',date:'10/03/2026',scoreRaw:'4'},
+  {account:'David',country:'CL',maabClient:'Core Concept',externalCompany:'MOBIL Arquitectos',date:'10/03/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CL',maabClient:'Core Concept',externalCompany:'BL Arquitectos',date:'10/03/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'EHSAN Al ABBAD CONSULT ENGINEERING',date:'13/03/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Core Concept',externalCompany:'FNPI',date:'02/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Core Concept',externalCompany:'Groupe Addoha',date:'07/04/2026',scoreRaw:'3'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'Kinan',date:'15/04/2026',scoreRaw:'4'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'MLB',date:'16/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Core Concept',externalCompany:'Eagle Hill Morocco',date:'23/04/2026',scoreRaw:'4'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'Asas Makeen',date:'04/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CL',maabClient:'Core Concept',externalCompany:'Boetsch',date:'06/05/2026',scoreRaw:'4'},
+  {account:'David',country:'TN',maabClient:'Core Concept',externalCompany:'Carthago Immobiliere',date:'07/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'BR',maabClient:'Core Concept',externalCompany:'Carthago Immobiliere',date:'08/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SA',maabClient:'Core Concept',externalCompany:'ROSHN',date:'11/05/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Core Concept',externalCompany:'Novec',date:'12/05/2026',scoreRaw:'4'},
+  {account:'David',country:'BR',maabClient:'Core Concept',externalCompany:'Mozak',date:'18/05/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'Core Concept',externalCompany:'Algeria Prestige',date:'19/05/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Core Concept',externalCompany:'Group Abdalas',date:'20/05/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'Core Concept',externalCompany:'Holding Willix',date:'25/05/2026',scoreRaw:'4'},
+  // ── GARSTEEL ─────────────────────────────────────────────────────────────
+  {account:'David',country:'MR',maabClient:'Garsteel',externalCompany:'Abdouly Holding',date:'15/01/2026',scoreRaw:'3'},
+  {account:'David',country:'SN',maabClient:'Garsteel',externalCompany:'Holding Willix',date:'20/01/2025',scoreRaw:'Presencial'},
+  {account:'David',country:'MR',maabClient:'Garsteel',externalCompany:'SEA Engeniring',date:'29/01/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'DKH Construction',date:'12/02/2026',scoreRaw:'3'},
+  {account:'David',country:'MR',maabClient:'Garsteel',externalCompany:'Maurimaint',date:'13/02/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'Garsteel',externalCompany:'GBI',date:'19/02/2026',scoreRaw:'3'},
+  {account:'David',country:'DZ',maabClient:'Garsteel',externalCompany:'Diar Consulting Group',date:'11/03/2026',scoreRaw:'N/A'},
+  {account:'David',country:'DZ',maabClient:'Garsteel',externalCompany:'Sosem',date:'12/03/2026',scoreRaw:'4'},
+  {account:'David',country:'CI',maabClient:'Garsteel',externalCompany:'Artemis',date:'16/03/2026',scoreRaw:'4'},
+  {account:'David',country:'EGT',maabClient:'Garsteel',externalCompany:'Rowad',date:'02/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'Lafarge Holcim',date:'14/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'BCM',date:'17/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'Wafa Holding',date:'17/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'KTAA',date:'20/04/2026',scoreRaw:'4'},
+  {account:'David',country:'CIV',maabClient:'Garsteel',externalCompany:'Group ivoire Vision',date:'27/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'OBTP',date:'29/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'CIV',maabClient:'Garsteel',externalCompany:'Edole Africa',date:'05/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SN',maabClient:'Garsteel',externalCompany:'CICA BTP',date:'06/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'Oxycoupe',date:'07/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'SAAD',date:'14/05/2026',scoreRaw:'4'},
+  {account:'David',country:'MR',maabClient:'Garsteel',externalCompany:'Comeca',date:'15/05/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Garsteel',externalCompany:'Somachame',date:'19/05/2026',scoreRaw:'3'},
+  // ── SINGULA ───────────────────────────────────────────────────────────────
+  {account:'David',country:'UAE',maabClient:'Singula',externalCompany:'Trient Trading',date:'11/02/2026',scoreRaw:'4'},
+  {account:'David',country:'JO',maabClient:'Singula',externalCompany:'Sanabel Landscaping',date:'25/02/2026',scoreRaw:'4'},
+  {account:'David',country:'SA',maabClient:'Singula',externalCompany:'HAK Architectural and Engineering Consultants',date:'17/03/2026',scoreRaw:'4'},
+  {account:'David',country:'EG',maabClient:'Singula',externalCompany:'DMA for Design and Engineering Consultancy',date:'18/03/2026',scoreRaw:'4'},
+  {account:'David',country:'UAE',maabClient:'Singula',externalCompany:'UNii Engineering Consultancy L.L.C',date:'23/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Proturf',date:'24/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Bluestream',date:'02/04/2026',scoreRaw:'2'},
+  {account:'David',country:'EGT',maabClient:'Singula',externalCompany:'Al Saqf Engineering Consultancy',date:'02/04/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Novec',date:'14/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Art vert',date:'15/04/2026',scoreRaw:'4'},
+  {account:'David',country:'QA',maabClient:'Singula',externalCompany:'Geoscape',date:'24/04/2026',scoreRaw:'4'},
+  {account:'David',country:'UAE',maabClient:'Singula',externalCompany:'Tanseeq',date:'30/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Ezio Design',date:'06/05/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Mafoder',date:'07/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Singula',externalCompany:'Novec',date:'12/05/2026',scoreRaw:'4'},
+  // ── PAVINORTE ────────────────────────────────────────────────────────────
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Seprob',date:'03/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Lafarge Holcim',date:'09/03/2026',scoreRaw:'3'},
+  {account:'David',country:'DZ',maabClient:'Pavinorte',externalCompany:'Cosider TP',date:'09/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Nge Maroc',date:'17/03/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'SGTM',date:'17/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Sonnet Construction',date:'26/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Sogea Maroc',date:'26/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Tomu Construction',date:'01/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'KST BAT',date:'01/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'AMG Building',date:'16/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'KTAA',date:'20/04/2026',scoreRaw:'3'},
+  {account:'David',country:'MR',maabClient:'Pavinorte',externalCompany:'Comeca',date:'28/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'DZ',maabClient:'Pavinorte',externalCompany:'Oxxo',date:'28/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'Loutfi Amenagement International',date:'24/04/2026',scoreRaw:'3'},
+  {account:'David',country:'KE',maabClient:'Pavinorte',externalCompany:'Edole Africa Group',date:'14/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'SGTM',date:'20/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'Pavinorte',externalCompany:'CMS',date:'25/05/2026',scoreRaw:'N/A'},
+  // ── TOPECA ───────────────────────────────────────────────────────────────
+  {account:'David',country:'DZ',maabClient:'TOPECA',externalCompany:'Fodil',date:'24/03/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Alwanka',date:'26/03/2026',scoreRaw:'3'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Robelbois',date:'31/03/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'TOPECA',externalCompany:'Fodil',date:'06/04/2026',scoreRaw:'4'},
+  {account:'David',country:'SN',maabClient:'TOPECA',externalCompany:'GBI Sarl',date:'13/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'RJN',date:'15/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'ALWANKA',date:'16/04/2026',scoreRaw:'N/A'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Vital fer',date:'16/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Wafa Holding',date:'17/04/2026',scoreRaw:'4'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Temara Steel',date:'29/04/2026',scoreRaw:'4'},
+  {account:'David',country:'UAE',maabClient:'TOPECA',externalCompany:'Buildmart',date:'27/04/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'TOPECA',externalCompany:'Fodil',date:'05/05/2026',scoreRaw:'N/A (reunião presencial Batimatec)'},
+  {account:'David',country:'MA',maabClient:'TOPECA',externalCompany:'Lafarge',date:'05/05/2026',scoreRaw:'N/A'},
+  {account:'David',country:'SN',maabClient:'TOPECA',externalCompany:'Nodeen Group',date:'12/05/2026',scoreRaw:'4'},
+  {account:'David',country:'DZ',maabClient:'TOPECA',externalCompany:'Fodil',date:'18/05/2026',scoreRaw:'4'},
 ];
 function normalizeDavidClientName(name){
   const v=String(name||'').trim();
-  const map={'Coreconcept':'Core Concept','Core concept':'Core Concept','core concept':'Core Concept','GENAN':'Genan','GARSTEEL':'Garsteel','SINGULA':'Singula','PAVINORTE':'Pavinorte','Topeca':'TOPECA','topeca':'TOPECA','TOPECA':'TOPECA'};
+  const map={
+    'Coreconcept':'Core Concept','Core concept':'Core Concept','core concept':'Core Concept',
+    'CoreConcept':'Core Concept','CORE CONCEPT':'Core Concept',
+    'GENAN':'Genan','genan':'Genan',
+    'GARSTEEL':'Garsteel','Gasrsteel':'Garsteel','garsteel':'Garsteel',
+    'SINGULA':'Singula','singula':'Singula',
+    'PAVINORTE':'Pavinorte','pavinorte':'Pavinorte',
+    'Topeca':'TOPECA','topeca':'TOPECA'
+  };
   return map[v]||v;
 }
 function _davidMeetType(row){
@@ -1189,7 +1336,7 @@ function _davidMeetType(row){
   const sc=String(row.scoreRaw||'').toLowerCase();
   if(/\bfu\b/.test(co)||co.includes('follow'))return'Follow-up';
   if(sc.includes('presencial')||sc.includes('batimatec'))return'Reunião presencial';
-  if(sc.includes('missão')||sc.includes('missao'))return'Missão empresarial';
+  if(sc.includes('missão')||sc.includes('missao')||sc.includes('empresarial'))return'Missão empresarial';
   return'Reunião comercial';
 }
 function _davidMeetScoreFromRaw(raw){
@@ -1198,7 +1345,14 @@ function _davidMeetScoreFromRaw(raw){
 }
 function _davidNotesFromScoreRaw(raw){
   const v=String(raw||'').trim();
-  return Number.isFinite(Number(v))?'':v;
+  if(!v||v==='N/A'||v==='TBC')return'';
+  if(Number.isFinite(Number(v)))return'';
+  // Extract meaningful text from "N/A (some detail)" patterns
+  const m=v.match(/\(([^)]+)\)/);
+  if(m)return m[1];
+  // Return the raw value if it has meaning (Presencial, Missão Empresarial, etc.)
+  if(v.toLowerCase()==='presencial')return'';
+  return v;
 }
 function importDavidCurrentClientMeetings(){
   if(!isAuthAdmin())return alert('Só o administrador pode executar esta importação.');
