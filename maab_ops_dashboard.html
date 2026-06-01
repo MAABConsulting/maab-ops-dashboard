@@ -2183,7 +2183,8 @@ const EX_CLIENTES_DATA=[
 ];
 const DONE_PIE_COLORS=['rgba(96,165,250,0.78)','rgba(52,211,153,0.78)','rgba(251,146,60,0.78)','rgba(167,139,250,0.78)','rgba(244,114,182,0.78)','rgba(148,163,184,0.65)'];
 // Sector colour map — top-5 match pie chart, others get distinct hues
-const SECTOR_COLORS={'Têxtil':'#60A5FA','Mobiliário':'#34D399','Alimentar':'#FB923C','Bebidas':'#A78BFA','Moda':'#F472B6','TIC':'#64748B','Saúde':'#F87171','Construção':'#A16207','Plástico':'#0EA5E9','Iluminação':'#FBBF24','Decoração':'#C084FC','Desporto':'#4ADE80','Madeira':'#92400E','Lar':'#FB7185','Beleza':'#E879F9','Pedra':'#78716C','Agricultura':'#84CC16','Publicidade':'#F97316','Produtos Químicos':'#06B6D4','Audiovisual':'#8B5CF6','Metalomecânica':'#9CA3AF','Embalagens':'#D97706','Climatização':'#0284C7','Cultura / Eventos':'#DB2777','Indústria':'#7C3AED','TIC/Bazar':'#475569','Mobiliário Urbano':'#059669'};
+// Colours match the pie chart slot order: Têxtil(0)=blue, Mobiliário(1)=green, Alimentar(2)=orange, TIC(3)=purple, Bebidas(4)=pink
+const SECTOR_COLORS={'Têxtil':'#60A5FA','Mobiliário':'#34D399','Alimentar':'#FB923C','TIC':'#A78BFA','Bebidas':'#F472B6','Moda':'#E879F9','Saúde':'#F87171','Construção':'#A16207','Plástico':'#0EA5E9','Iluminação':'#FBBF24','Decoração':'#C084FC','Desporto':'#4ADE80','Madeira':'#92400E','Lar':'#FB7185','Beleza':'#D946A8','Pedra':'#78716C','Agricultura':'#84CC16','Publicidade':'#F97316','Produtos Químicos':'#06B6D4','Audiovisual':'#8B5CF6','Metalomecânica':'#9CA3AF','Embalagens':'#D97706','Climatização':'#0284C7','Cultura / Eventos':'#DB2777','Indústria':'#7C3AED','TIC/Bazar':'#475569','Mobiliário Urbano':'#059669'};
 function _sectorColor(s){return SECTOR_COLORS[s]||'#64748B';}
 function _sectorBadge(s){const c=_sectorColor(s);return`<span style="display:inline-block;font-size:11px;font-weight:500;background:${c}18;border:1px solid ${c}44;border-radius:6px;padding:2px 8px;color:${c}">${h(s)}</span>`;}
 function _satColor(s){if(!s)return'var(--t3)';if(s>=5)return'#1D9E75';if(s>=4)return'#3AAA78';if(s>=3)return'#BA7517';if(s>=2)return'#E06316';return'#CC3333';}
@@ -2298,22 +2299,22 @@ function renderConcluidos(){
   const outrosCount=sortedSectors.slice(5).reduce((s,[,v])=>s+v,0);
   if(outrosCount>0)mainSectors.push(['Outros',outrosCount]);
   document.getElementById('done-stats').innerHTML=`
-    <div style="display:grid;grid-template-columns:140px 1fr 160px;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px">
-      <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--border)">
-        <div style="font-size:44px;font-weight:700;color:var(--green);line-height:1">${allData.length}</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:6px;text-align:center;line-height:1.4">Clientes<br>Concluídos</div>
+    <div style="display:flex;align-items:stretch;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px;max-width:700px">
+      <div style="padding:18px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--border);flex-shrink:0;min-width:110px">
+        <div style="font-size:40px;font-weight:700;color:var(--green);line-height:1">${allData.length}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:5px;text-align:center;line-height:1.4">Clientes<br>Concluídos</div>
       </div>
-      <div style="padding:16px 20px;display:flex;align-items:center;gap:20px">
-        <div style="position:relative;width:120px;height:120px;flex-shrink:0"><canvas id="done-pie-chart"></canvas></div>
+      <div style="padding:14px 18px;display:flex;align-items:center;gap:14px;flex:1;min-width:0">
+        <div style="position:relative;width:90px;height:90px;flex-shrink:0"><canvas id="done-pie-chart"></canvas></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Por Setor</div>
-          <div id="done-pie-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11px"></div>
+          <div style="font-size:9px;font-weight:700;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Por Setor</div>
+          <div id="done-pie-legend" style="display:flex;flex-direction:column;gap:3px;font-size:11px"></div>
         </div>
       </div>
-      <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border)">
-        <div style="font-size:44px;font-weight:700;color:${avgColor};line-height:1">${avgSat}</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:6px;text-align:center;line-height:1.4">Satisfação<br>Média / 5</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:4px">${satVals.length} avaliações</div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);flex-shrink:0;min-width:110px">
+        <div style="font-size:40px;font-weight:700;color:${avgColor};line-height:1">${avgSat}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:5px;text-align:center;line-height:1.4">Satisfação<br>Média / 5</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:3px">${satVals.length} avaliações</div>
       </div>
     </div>`;
   // Draw pie
@@ -2322,7 +2323,7 @@ function renderConcluidos(){
   if(pieCtx){
     CHARTS['done-pie']=new Chart(pieCtx,{type:'doughnut',data:{labels:mainSectors.map(([s])=>s),datasets:[{data:mainSectors.map(([,v])=>v),backgroundColor:DONE_PIE_COLORS.slice(0,mainSectors.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} cliente${ctx.raw!==1?'s':''} (${Math.round(ctx.raw/allData.length*100)}%)`}}},cutout:'62%'}});
     const legEl=document.getElementById('done-pie-legend');
-    if(legEl)legEl.innerHTML=mainSectors.map(([s,v],i)=>`<div style="display:flex;align-items:center;gap:4px;min-width:0"><span style="width:8px;height:8px;border-radius:50%;background:${DONE_PIE_COLORS[i]};flex-shrink:0"></span><span style="color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${h(s)}</span><span style="color:var(--t3);flex-shrink:0">${v}</span></div>`).join('');
+    if(legEl)legEl.innerHTML=mainSectors.map(([s,v],i)=>`<div style="display:flex;align-items:center;gap:5px;min-width:0"><span style="width:8px;height:8px;border-radius:2px;background:${DONE_PIE_COLORS[i]};flex-shrink:0"></span><span style="color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-size:11px">${h(s)}</span><span style="color:var(--t3);flex-shrink:0;font-size:11px;font-weight:500;min-width:18px;text-align:right">${v}</span></div>`).join('');
   }
   // Pagination
   const PAGE_SIZE=15;
