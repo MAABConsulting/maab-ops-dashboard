@@ -163,6 +163,17 @@ body.auth-locked .login-ov{display:flex}
 .mini-chart{height:42px;display:flex;align-items:end;gap:3px;margin-top:10px;border-bottom:1px solid var(--border)}
 .mini-bar{flex:1;min-width:4px;background:var(--blue-lt);border-radius:3px 3px 0 0}
 @media(max-width:900px){.meet-layout{grid-template-columns:1fr}.cmdbar{position:static}}
+.ex-overlay{position:fixed;inset:0;z-index:1100;background:rgba(15,23,42,.45);backdrop-filter:blur(2px);display:flex;justify-content:flex-end}
+.ex-drawer{width:460px;height:100%;background:var(--surface);overflow-y:auto;box-shadow:-6px 0 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.ex-drawer-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+.ex-drawer-body{padding:22px;flex:1}
+.ex-field{margin-bottom:16px}
+.ex-field-lbl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.ex-field-val{font-size:14px;color:var(--text);line-height:1.45}
+.ex-field-val a{color:var(--blue);text-decoration:none}
+.ex-field-val a:hover{text-decoration:underline}
+.done-row-item{cursor:pointer;transition:background .12s}
+.done-row-item:hover{background:var(--blue-bg) !important}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 .app{grid-template-columns:288px 1fr;transition:grid-template-columns .2s ease}
 .app.sb-collapsed{grid-template-columns:86px 1fr}
@@ -489,6 +500,19 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
     <div id="settings-root"></div>
   </div>
 </main>
+</div>
+<!-- Ex-Client Detail Drawer -->
+<div id="ex-client-overlay" class="ex-overlay" style="display:none" onclick="if(event.target===this)closeExClientCard()">
+  <div class="ex-drawer" onclick="event.stopPropagation()">
+    <div class="ex-drawer-hdr">
+      <div style="flex:1;min-width:0">
+        <div id="ex-cl-name" style="font-size:18px;font-weight:600;color:var(--text);line-height:1.2"></div>
+        <div id="ex-cl-badges" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      </div>
+      <button class="btn" onclick="closeExClientCard()" style="flex-shrink:0;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center"><i class="ti ti-arrow-left"></i></button>
+    </div>
+    <div class="ex-drawer-body" id="ex-cl-body"></div>
+  </div>
 </div>
 <div class="modal-ov" id="modal-ov"><div class="modal" id="modal-box"></div></div>
 <div class="toast" id="toast"><i class="ti ti-check" style="font-size:13px"></i>Guardado</div>
@@ -2157,10 +2181,76 @@ const EX_CLIENTES_DATA=[
   {nome:'Volt Padel',sector:'Desporto',sub:'Raquetes Padel',sat:4},
   {nome:'wTVision',sector:'TIC',sub:'Streaming',sat:2},
 ];
-const DONE_PIE_COLORS=['#378ADD','#1D9E75','#BA7517','#6B55C8','#E06316','#CC3333','#3BAAB2','#8B5E3C','#D946A8','#A32D2D','#4DAA50','#F59E0B','#64748B','#0EA5E9'];
+const DONE_PIE_COLORS=['rgba(96,165,250,0.78)','rgba(52,211,153,0.78)','rgba(251,146,60,0.78)','rgba(167,139,250,0.78)','rgba(244,114,182,0.78)','rgba(148,163,184,0.65)'];
 function _satColor(s){if(!s)return'var(--t3)';if(s>=5)return'#1D9E75';if(s>=4)return'#3AAA78';if(s>=3)return'#BA7517';if(s>=2)return'#E06316';return'#CC3333';}
 function _satBadge(s){if(!s)return`<span style="font-size:11px;color:var(--t3)">Sem avaliação</span>`;const stars='★'.repeat(s)+'☆'.repeat(5-s);return`<span style="font-size:13px;font-weight:600;color:${_satColor(s)}">${s}/5</span><span style="font-size:11px;color:${_satColor(s)};margin-left:3px">${stars}</span>`;}
 function onDoneSectorChange(){const sub=document.getElementById('done-subsector');if(sub)sub.value='';renderConcluidos();}
+function _exExtra(nome){if(!S.exClientesExtra)S.exClientesExtra={};return S.exClientesExtra[nome]||{};}
+function openExClientCard(nome){
+  const base=EX_CLIENTES_DATA.find(c=>c.nome===nome);if(!base)return;
+  const ex=_exExtra(nome);
+  const merged={...base,...ex};
+  const ov=document.getElementById('ex-client-overlay');if(!ov)return;
+  document.getElementById('ex-cl-name').textContent=merged.nome;
+  document.getElementById('ex-cl-badges').innerHTML=`<span style="font-size:11px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--t2)">${h(merged.sector)}</span>${merged.sub?`<span style="font-size:11px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--t3)">${h(merged.sub)}</span>`:''}`;
+  document.getElementById('ex-cl-body').innerHTML=_exClientViewHTML(merged);
+  ov.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function _exClientViewHTML(c){
+  const sat=c.sat||0;
+  const satStr=sat?`${sat}/5 ${'★'.repeat(sat)}${'☆'.repeat(5-sat)}`:'Sem avaliação';
+  const siteVal=c.site?`<a href="${/^https?:/.test(c.site)?c.site:'https://'+c.site}" target="_blank" rel="noopener">${h(c.site)}</a>`:h('—');
+  return`<div>
+    <div class="ex-field"><div class="ex-field-lbl">Setor</div><div class="ex-field-val">${h(c.sector||'—')}</div></div>
+    <div class="ex-field"><div class="ex-field-lbl">Subsetor</div><div class="ex-field-val">${h(c.sub||'—')}</div></div>
+    <div class="ex-field"><div class="ex-field-lbl">Localização</div><div class="ex-field-val">${h(c.local||'—')}</div></div>
+    <div class="ex-field"><div class="ex-field-lbl">Contacto</div><div class="ex-field-val">${h(c.contacto||'—')}</div></div>
+    <div class="ex-field"><div class="ex-field-lbl">Website</div><div class="ex-field-val">${siteVal}</div></div>
+    <div class="ex-field"><div class="ex-field-lbl">Satisfação</div><div class="ex-field-val" style="color:${_satColor(sat)};font-weight:500">${satStr}</div></div>
+    ${c.notas?`<div class="ex-field"><div class="ex-field-lbl">Notas</div><div class="ex-field-val" style="white-space:pre-wrap;font-size:13px;line-height:1.5">${h(c.notas)}</div></div>`:''}
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-p" onclick="openExClientEdit('${c.nome.replace(/'/g,'&#39;')}')"><i class="ti ti-edit"></i>Editar informações</button>
+    </div>
+  </div>`;}
+function openExClientEdit(nome){
+  const base=EX_CLIENTES_DATA.find(c=>c.nome===nome);if(!base)return;
+  const ex=_exExtra(nome);const c={...base,...ex};
+  document.getElementById('ex-cl-body').innerHTML=`<div>
+    <div class="ex-field"><div class="ex-field-lbl">Setor</div><input class="form-in" id="ecl-sector" value="${h(c.sector||'')}"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Subsetor</div><input class="form-in" id="ecl-sub" value="${h(c.sub||'')}"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Localização</div><input class="form-in" id="ecl-local" value="${h(c.local||'')}" placeholder="Ex: Lisboa, Portugal"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Contacto</div><input class="form-in" id="ecl-contacto" value="${h(c.contacto||'')}" placeholder="Ex: +351 210 000 000 / email@empresa.pt"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Website</div><input class="form-in" id="ecl-site" value="${h(c.site||'')}" placeholder="Ex: www.empresa.pt"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Satisfação (0–5)</div><input class="form-in" id="ecl-sat" type="number" min="0" max="5" step="1" value="${c.sat||0}"></div>
+    <div class="ex-field"><div class="ex-field-lbl">Notas</div><textarea class="form-in" id="ecl-notas" rows="3" placeholder="Observações internas...">${h(c.notas||'')}</textarea></div>
+    <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-p" onclick="saveExClientCard('${nome.replace(/'/g,'&#39;')}')"><i class="ti ti-device-floppy"></i>Guardar</button>
+      <button class="btn" onclick="openExClientCard('${nome.replace(/'/g,'&#39;')}')"><i class="ti ti-x"></i>Cancelar</button>
+    </div>
+  </div>`;}
+function saveExClientCard(nome){
+  if(!S.exClientesExtra)S.exClientesExtra={};
+  const base=EX_CLIENTES_DATA.find(c=>c.nome===nome);if(!base)return;
+  const sector=document.getElementById('ecl-sector')?.value.trim()||base.sector;
+  const sub=document.getElementById('ecl-sub')?.value.trim()||'';
+  const local=document.getElementById('ecl-local')?.value.trim()||'';
+  const contacto=document.getElementById('ecl-contacto')?.value.trim()||'';
+  const site=document.getElementById('ecl-site')?.value.trim()||'';
+  const sat=Math.max(0,Math.min(5,parseInt(document.getElementById('ecl-sat')?.value||'0')||0));
+  const notas=document.getElementById('ecl-notas')?.value.trim()||'';
+  S.exClientesExtra[nome]={sector,sub,local,contacto,site,sat,notas};
+  // Also update base array so list re-renders correctly
+  base.sector=sector;base.sub=sub;base.sat=sat;
+  save();
+  openExClientCard(nome);
+  showToast&&showToast('Informações guardadas ✓');
+}
+function closeExClientCard(){
+  const ov=document.getElementById('ex-client-overlay');
+  if(ov)ov.style.display='none';
+  document.body.style.overflow='';
+}
 function renderConcluidos(){
   const secSel=document.getElementById('done-sector'),subSel=document.getElementById('done-subsector'),satSel=document.getElementById('done-sat');
   if(!secSel)return;
@@ -2195,11 +2285,11 @@ function renderConcluidos(){
   const avgSat=satVals.length?(satVals.reduce((a,b)=>a+b,0)/satVals.length).toFixed(1):'—';
   const avgSatNum=Number(avgSat);
   const avgColor=isNaN(avgSatNum)?'var(--t3)':avgSatNum>=4?'#1D9E75':avgSatNum>=3?'#BA7517':'#CC3333';
-  // Sector distribution for pie
+  // Sector distribution for pie — top 5 + Outros
   const sectorMap={};allData.forEach(c=>{sectorMap[c.sector]=(sectorMap[c.sector]||0)+1;});
   const sortedSectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
-  const mainSectors=sortedSectors.filter(([,v])=>v>=2);
-  const outrosCount=sortedSectors.filter(([,v])=>v<2).reduce((s,[,v])=>s+v,0);
+  const mainSectors=sortedSectors.slice(0,5);
+  const outrosCount=sortedSectors.slice(5).reduce((s,[,v])=>s+v,0);
   if(outrosCount>0)mainSectors.push(['Outros',outrosCount]);
   document.getElementById('done-stats').innerHTML=`
     <div style="display:grid;grid-template-columns:140px 1fr 160px;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px">
@@ -2224,7 +2314,7 @@ function renderConcluidos(){
   if(CHARTS['done-pie']){CHARTS['done-pie'].destroy();delete CHARTS['done-pie'];}
   const pieCtx=document.getElementById('done-pie-chart');
   if(pieCtx){
-    CHARTS['done-pie']=new Chart(pieCtx,{type:'doughnut',data:{labels:mainSectors.map(([s])=>s),datasets:[{data:mainSectors.map(([,v])=>v),backgroundColor:DONE_PIE_COLORS.slice(0,mainSectors.length),borderWidth:2,borderColor:'var(--surface)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} cliente${ctx.raw!==1?'s':''} (${Math.round(ctx.raw/allData.length*100)}%)`}}},cutout:'62%'}});
+    CHARTS['done-pie']=new Chart(pieCtx,{type:'doughnut',data:{labels:mainSectors.map(([s])=>s),datasets:[{data:mainSectors.map(([,v])=>v),backgroundColor:DONE_PIE_COLORS.slice(0,mainSectors.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} cliente${ctx.raw!==1?'s':''} (${Math.round(ctx.raw/allData.length*100)}%)`}}},cutout:'62%'}});
     const legEl=document.getElementById('done-pie-legend');
     if(legEl)legEl.innerHTML=mainSectors.map(([s,v],i)=>`<div style="display:flex;align-items:center;gap:4px;min-width:0"><span style="width:8px;height:8px;border-radius:50%;background:${DONE_PIE_COLORS[i]};flex-shrink:0"></span><span style="color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${h(s)}</span><span style="color:var(--t3);flex-shrink:0">${v}</span></div>`).join('');
   }
@@ -2234,8 +2324,8 @@ function renderConcluidos(){
   listEl.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
     <div style="display:grid;grid-template-columns:1fr 150px 180px 150px;padding:9px 16px;background:var(--s2);border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">
       <span>Cliente</span><span>Setor</span><span>Subsetor</span><span>Satisfação</span></div>
-    ${filtered.map((c,i)=>`<div style="display:grid;grid-template-columns:1fr 150px 180px 150px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;background:${i%2===0?'var(--surface)':'var(--s2)'}">
-      <span style="font-size:13px;font-weight:500;color:var(--text)">${h(c.nome)}</span>
+    ${filtered.map((c,i)=>`<div class="done-row-item" onclick="openExClientCard('${c.nome.replace(/'/g,'&#39;')}')" style="display:grid;grid-template-columns:1fr 150px 180px 150px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;background:${i%2===0?'var(--surface)':'var(--s2)'}">
+      <span style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px">${h(c.nome)}<i class="ti ti-chevron-right" style="font-size:11px;color:var(--t3)"></i></span>
       <span><span style="display:inline-block;font-size:11px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--t2)">${h(c.sector)}</span></span>
       <span style="font-size:12px;color:var(--t3)">${h(c.sub||'—')}</span>
       <span>${_satBadge(c.sat)}</span>
