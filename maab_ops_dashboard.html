@@ -410,9 +410,14 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
     <div class="card" style="padding:14px 16px"><div style="font-size:13px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-building-store" style="font-size:14px;color:var(--t3)"></i>Clientes atuais</div><div id="client-grid"></div></div>
   </div>
   <div class="view" id="view-concluidos">
-    <div class="topbar"><div><div class="ptitle">Clientes concluídos</div><div class="psub" id="done-sub"></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="btn" id="done-am" onchange="renderConcluidos()"><option value="">Todos os AMs</option></select></div></div>
-    <div id="done-grid"></div>
+    <div class="topbar"><div><div class="ptitle">Clientes Concluídos</div><div class="psub" id="done-sub"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="btn" id="done-sector" onchange="onDoneSectorChange()"><option value="">Todos os setores</option></select>
+      <select class="btn" id="done-subsector" onchange="renderConcluidos()"><option value="">Todos os subsetores</option></select>
+      <select class="btn" id="done-sat" onchange="renderConcluidos()"><option value="">Toda satisfação</option><option value="alta">Alta (4–5 ★)</option><option value="media">Média (3 ★)</option><option value="baixa">Baixa (1–2 ★)</option><option value="sem">Sem avaliação</option></select>
+    </div></div>
+    <div id="done-stats" style="padding:14px 16px 0"></div>
+    <div id="done-list" style="padding:0 16px 24px"></div>
   </div>
   <div class="view" id="view-reunioes">
     <div class="topbar"><div><div class="ptitle">Controle de Reuniões</div><div class="psub">Acompanhe reuniões realizadas, reuniões agendadas, follow-ups e próximos passos por account, cliente e empresa.</div></div><button class="btn btn-p" onclick="openMeetingForm()"><i class="ti ti-plus"></i>Nova reunião</button></div>
@@ -2064,21 +2069,178 @@ function renderClientGrid(projects){
   }
 }
 
+// ── Ex-Clientes static data (from Excel "Clientes por Sector") ──────────────
+const EX_CLIENTES_DATA=[
+  {nome:'Acushla',sector:'Alimentar',sub:'Azeite',sat:4},
+  {nome:'Alpha Gamer',sector:'Mobiliário',sub:'Cadeiras Gaming',sat:3},
+  {nome:'ANC Brands',sector:'Moda',sub:'Calçado',sat:2},
+  {nome:'Aquinos',sector:'Mobiliário',sub:'Sofás',sat:3},
+  {nome:'Aronlight',sector:'Iluminação',sub:'',sat:4},
+  {nome:'Arxi',sector:'TIC',sub:'',sat:0},
+  {nome:'Cácio',sector:'Mobiliário',sub:'',sat:3},
+  {nome:'Caixa Mágica',sector:'TIC',sub:'Software',sat:3},
+  {nome:'Camellia',sector:'Moda',sub:'Infantil',sat:2},
+  {nome:'Celar',sector:'Lar',sub:'Kitchen Wear',sat:4},
+  {nome:'Crafil',sector:'Têxtil',sub:'Fios',sat:5},
+  {nome:'Creative Textile',sector:'Têxtil',sub:'Private Label',sat:3},
+  {nome:'Cubo Hotel',sector:'Decoração',sub:'Hotelaria',sat:0},
+  {nome:'Cubu Fitness',sector:'Moda',sub:'Marca Roupa Desportiva',sat:2},
+  {nome:'CyberX - The Ethical Hacking Services',sector:'TIC',sub:'Segurança',sat:3},
+  {nome:'Defontes',sector:'Mobiliário',sub:'',sat:4},
+  {nome:'Delta',sector:'Alimentar',sub:'Café',sat:5},
+  {nome:'Embelleze',sector:'Beleza',sub:'Produtos Capilares',sat:3},
+  {nome:'Exposerve',sector:'Limpeza',sub:'Produtos de Limpeza',sat:3},
+  {nome:'Fapil',sector:'Plástico',sub:'Produtos de Limpeza',sat:4},
+  {nome:'Farimóvel',sector:'Mobiliário',sub:'',sat:4},
+  {nome:'Farvoli',sector:'Agricultura',sub:'Maquinaria para Frutas',sat:4},
+  {nome:'FM Têxteis',sector:'Têxtil',sub:'Private Label',sat:4},
+  {nome:'Foco Criativo',sector:'Publicidade',sub:'Colagens Personalizadas',sat:2},
+  {nome:'Focor',sector:'Produtos Químicos',sub:'',sat:2},
+  {nome:'Fravizel',sector:'Pedra',sub:'Máquinas',sat:3},
+  {nome:'Freak Chic',sector:'Moda',sub:'StreetWear',sat:1},
+  {nome:'Freire Lobo',sector:'Bebidas',sub:'Vinho',sat:4},
+  {nome:'Gema',sector:'Audiovisual',sub:'',sat:4},
+  {nome:'Generis',sector:'Saúde',sub:'Medicamentos',sat:0},
+  {nome:'Gin T',sector:'Bebidas',sub:'Gin',sat:2},
+  {nome:'Givachoice',sector:'Têxtil',sub:'Private Label',sat:4},
+  {nome:'Gold Nutrition',sector:'Desporto',sub:'Suplementos Alimentares',sat:4},
+  {nome:'Gracia Sofia',sector:'Têxtil',sub:'Bordados',sat:2},
+  {nome:'Granidense',sector:'Pedra',sub:'Granito',sat:2},
+  {nome:'Grow Out',sector:'Alimentar',sub:'Conservas',sat:4},
+  {nome:'Indinor',sector:'Produtos Químicos',sub:'',sat:2},
+  {nome:'Infinite Foundry',sector:'TIC',sub:'Automação',sat:3},
+  {nome:'Inventis',sector:'Saúde',sub:'Suplementos Alimentares',sat:3},
+  {nome:'Irmão Rodrigues',sector:'Têxtil',sub:'Private Label',sat:4},
+  {nome:'Já Te Disse',sector:'Bebidas',sub:'Vinho',sat:2},
+  {nome:'JF Almeida',sector:'Têxtil',sub:'Lar',sat:3},
+  {nome:'José Luis Madeiras',sector:'Madeira',sub:'',sat:3},
+  {nome:'JOSSOIS',sector:'Mobiliário',sub:'Guarda-Sol',sat:4},
+  {nome:'Katoa',sector:'Iluminação',sub:'',sat:4},
+  {nome:'Kiba Candles',sector:'Decoração',sub:'Velas',sat:3},
+  {nome:'LamdaGolf',sector:'Moda',sub:'Calçado Golf',sat:3},
+  {nome:'Life Well',sector:'Saúde',sub:'Suplementos Alimentares',sat:0},
+  {nome:'Magic Pharma',sector:'Saúde',sub:'Ortopedia',sat:3},
+  {nome:'Mariano',sector:'Moda',sub:'Calçado',sat:2},
+  {nome:'Marinhave',sector:'Alimentar',sub:'Pato',sat:0},
+  {nome:'Metallik',sector:'Construção',sub:'Perfis Metálicos',sat:3},
+  {nome:'Micromil',sector:'Saúde',sub:'Máquinas de Raio X',sat:4},
+  {nome:'Mirapack',sector:'Embalagens',sub:'Sacos Moda Premium',sat:4},
+  {nome:'New Matress',sector:'Mobiliário',sub:'Colchões',sat:2},
+  {nome:'Novaqui',sector:'Mobiliário',sub:'Colchões',sat:3},
+  {nome:'Passado Vivo',sector:'Cultura / Eventos',sub:'Recreações',sat:0},
+  {nome:'Plasvip',sector:'Plástico',sub:'Moldes',sat:3},
+  {nome:'PMC',sector:'Bebidas',sub:'Vinho',sat:2},
+  {nome:'Qucaan',sector:'Indústria',sub:'Roupa de Trabalho e Ferramentas Industriais',sat:3},
+  {nome:'Ramagplast',sector:'Plástico',sub:'Injeção',sat:3},
+  {nome:'Recheio',sector:'Alimentar',sub:'Retalho',sat:4},
+  {nome:'RJB Home',sector:'Mobiliário',sub:'Decoração de Interiores',sat:2},
+  {nome:'RPL Clima',sector:'Climatização',sub:'',sat:3},
+  {nome:'Salma Furniture',sector:'Mobiliário',sub:'',sat:3},
+  {nome:'Salutem',sector:'Alimentar',sub:'Bolachas de Arroz',sat:0},
+  {nome:'Sanitana',sector:'Construção',sub:'Sanitários',sat:0},
+  {nome:'Santa Marta',sector:'Têxtil',sub:'Private Label',sat:0},
+  {nome:'SF Globalaser',sector:'Metalomecânica',sub:'',sat:3},
+  {nome:'Sobba',sector:'Alimentar',sub:'Chá',sat:1},
+  {nome:'Socutel',sector:'Lar',sub:'Cutelaria',sat:3},
+  {nome:'Techno Store',sector:'TIC',sub:'Hardware',sat:4},
+  {nome:'Tetribérica',sector:'Têxtil',sub:'Private Label',sat:4},
+  {nome:'Têxteis Nortenha',sector:'Têxtil',sub:'Private Label',sat:3},
+  {nome:'Têxteis Penedo',sector:'Têxtil',sub:'Lar',sat:4},
+  {nome:'Timbera',sector:'Madeira',sub:'Marketplace',sat:0},
+  {nome:'Torrie',sector:'Bebidas',sub:'Café',sat:0},
+  {nome:'TP Link',sector:'TIC',sub:'Routers',sat:0},
+  {nome:'Triportugal',sector:'Alimentar',sub:'Fruta',sat:0},
+  {nome:'Vale de Barqueiros',sector:'Bebidas',sub:'Vinho',sat:0},
+  {nome:'Veco Urban Design',sector:'Mobiliário Urbano',sub:'',sat:3},
+  {nome:'Vinhos Borges',sector:'Bebidas',sub:'Vinho',sat:5},
+  {nome:'Vittawood',sector:'Construção',sub:'Perfis Metálicos',sat:4},
+  {nome:'Volt Padel',sector:'Desporto',sub:'Raquetes Padel',sat:4},
+  {nome:'wTVision',sector:'TIC',sub:'Streaming',sat:2},
+];
+const DONE_PIE_COLORS=['#378ADD','#1D9E75','#BA7517','#6B55C8','#E06316','#CC3333','#3BAAB2','#8B5E3C','#D946A8','#A32D2D','#4DAA50','#F59E0B','#64748B','#0EA5E9'];
+function _satColor(s){if(!s)return'var(--t3)';if(s>=5)return'#1D9E75';if(s>=4)return'#3AAA78';if(s>=3)return'#BA7517';if(s>=2)return'#E06316';return'#CC3333';}
+function _satBadge(s){if(!s)return`<span style="font-size:11px;color:var(--t3)">Sem avaliação</span>`;const stars='★'.repeat(s)+'☆'.repeat(5-s);return`<span style="font-size:13px;font-weight:600;color:${_satColor(s)}">${s}/5</span><span style="font-size:11px;color:${_satColor(s)};margin-left:3px">${stars}</span>`;}
+function onDoneSectorChange(){const sub=document.getElementById('done-subsector');if(sub)sub.value='';renderConcluidos();}
 function renderConcluidos(){
-  const sel=document.getElementById('done-am');const prev=sel.value;sel.innerHTML='<option value="">Todos os AMs</option>';visibleAMs().forEach(am=>sel.appendChild(new Option(am.name,am.id)));sel.disabled=false;if(prev)sel.value=prev;
-  const ps=visibleProjects().filter(p=>p.estado==='concluido'&&(!sel.value||String(p.amId)===sel.value));
-  document.getElementById('done-sub').textContent=`${ps.length} cliente${ps.length!==1?'s':''} concluído${ps.length!==1?'s':''}`;
-  const grid=document.getElementById('done-grid');grid.className='done-grid';grid.innerHTML='';
-  if(!ps.length){grid.innerHTML='<div class="card" style="color:var(--t3);font-size:13px">Sem clientes concluídos neste filtro.</div>';return;}
-  ps.forEach(p=>{
-    ensureMetricShape(p);
-    const am=getAM(p.amId),labels=projectLabels(p),totalR=p.mensal.r.reduce((a,b)=>a+b,0),totalC=p.mensal.c.reduce((a,b)=>a+b,0),totalK=p.mensal.k.reduce((a,b)=>a+b,0),avg=scoreAvg(p);
-    const max=Math.max(1,...p.mensal.r);
-    const feedback=(p.feedbackFinal||p.nota||((S.comments[p.id]||[]).filter(c=>!c.deleted).map(c=>c.text).join('\n\n'))||'Sem feedback final registado.');
-    const div=document.createElement('div');div.className='done-card';
-    div.innerHTML=`<div class="done-top"><div><div class="done-title">${h(p.cliente)}</div><div class="done-meta">${h(p.nome)} · ${labels[0]} → ${labels[labels.length-1]}</div></div>${avH(am,32)}</div><div class="done-meta">${h(am.name)} · ${h(am.role||'AM')}</div><div class="done-strip"><span class="done-mini"><b>${totalR}</b> reuniões</span><span class="done-mini"><b>${totalC}</b> cotações</span><span class="done-mini"><b>${totalK}</b> contratos</span><span class="done-mini"><b>${avg||'—'}</b> score médio</span><span class="done-mini"><b>${scoreCollectionRate(p)}%</b> score recolhido</span></div><div class="mini-chart">${p.mensal.r.map((v,i)=>`<span class="mini-bar" title="${h(labels[i])}: ${v} reuniões" style="height:${Math.max(8,(v/max)*38)}px;background:${v?'var(--blue-lt)':'var(--s2)'}"></span>`).join('')}</div><div class="done-feedback">${h(feedback.length>360?feedback.slice(0,360)+'...':feedback)}</div><div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-sm" onclick="openEditProj(${p.id})"><i class="ti ti-edit"></i>Editar feedback</button><button class="btn btn-sm" onclick="document.querySelector('[data-view=&quot;equipa&quot;]').click();setTimeout(()=>openEditProj(${p.id}),100)"><i class="ti ti-chart-line"></i>Ver projeto</button></div>`;
-    grid.appendChild(div);
-  });
+  const secSel=document.getElementById('done-sector'),subSel=document.getElementById('done-subsector'),satSel=document.getElementById('done-sat');
+  if(!secSel)return;
+  const allData=EX_CLIENTES_DATA;
+  // Populate sector options
+  const sectors=[...new Set(allData.map(c=>c.sector))].sort();
+  const prevSec=secSel.value;
+  secSel.innerHTML='<option value="">Todos os setores</option>';
+  sectors.forEach(s=>secSel.add(new Option(s,s)));
+  if(prevSec&&sectors.includes(prevSec))secSel.value=prevSec;
+  const filterSec=secSel.value;
+  // Populate subsector based on sector
+  const subs=[...new Set(allData.filter(c=>!filterSec||c.sector===filterSec).map(c=>c.sub).filter(Boolean))].sort();
+  const prevSub=subSel.value;
+  subSel.innerHTML='<option value="">Todos os subsetores</option>';
+  subs.forEach(s=>subSel.add(new Option(s,s)));
+  if(prevSub&&subs.includes(prevSub))subSel.value=prevSub;
+  const filterSub=subSel.value,filterSat=satSel.value;
+  // Filter
+  const filtered=allData.filter(c=>{
+    if(filterSec&&c.sector!==filterSec)return false;
+    if(filterSub&&c.sub!==filterSub)return false;
+    if(filterSat==='alta'&&c.sat<4)return false;
+    if(filterSat==='media'&&c.sat!==3)return false;
+    if(filterSat==='baixa'&&(c.sat<1||c.sat>2))return false;
+    if(filterSat==='sem'&&c.sat>0)return false;
+    return true;
+  }).sort((a,b)=>a.nome.localeCompare(b.nome,'pt'));
+  document.getElementById('done-sub').textContent=`${filtered.length} de ${allData.length} cliente${allData.length!==1?'s':''} concluído${allData.length!==1?'s':''}`;
+  // Stats block (always uses full data)
+  const satVals=allData.filter(c=>c.sat>0).map(c=>c.sat);
+  const avgSat=satVals.length?(satVals.reduce((a,b)=>a+b,0)/satVals.length).toFixed(1):'—';
+  const avgSatNum=Number(avgSat);
+  const avgColor=isNaN(avgSatNum)?'var(--t3)':avgSatNum>=4?'#1D9E75':avgSatNum>=3?'#BA7517':'#CC3333';
+  // Sector distribution for pie
+  const sectorMap={};allData.forEach(c=>{sectorMap[c.sector]=(sectorMap[c.sector]||0)+1;});
+  const sortedSectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+  const mainSectors=sortedSectors.filter(([,v])=>v>=2);
+  const outrosCount=sortedSectors.filter(([,v])=>v<2).reduce((s,[,v])=>s+v,0);
+  if(outrosCount>0)mainSectors.push(['Outros',outrosCount]);
+  document.getElementById('done-stats').innerHTML=`
+    <div style="display:grid;grid-template-columns:140px 1fr 160px;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px">
+      <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--border)">
+        <div style="font-size:44px;font-weight:700;color:var(--green);line-height:1">${allData.length}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:6px;text-align:center;line-height:1.4">Clientes<br>Concluídos</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:20px">
+        <div style="position:relative;width:120px;height:120px;flex-shrink:0"><canvas id="done-pie-chart"></canvas></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Por Setor</div>
+          <div id="done-pie-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:11px"></div>
+        </div>
+      </div>
+      <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border)">
+        <div style="font-size:44px;font-weight:700;color:${avgColor};line-height:1">${avgSat}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:6px;text-align:center;line-height:1.4">Satisfação<br>Média / 5</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">${satVals.length} avaliações</div>
+      </div>
+    </div>`;
+  // Draw pie
+  if(CHARTS['done-pie']){CHARTS['done-pie'].destroy();delete CHARTS['done-pie'];}
+  const pieCtx=document.getElementById('done-pie-chart');
+  if(pieCtx){
+    CHARTS['done-pie']=new Chart(pieCtx,{type:'doughnut',data:{labels:mainSectors.map(([s])=>s),datasets:[{data:mainSectors.map(([,v])=>v),backgroundColor:DONE_PIE_COLORS.slice(0,mainSectors.length),borderWidth:2,borderColor:'var(--surface)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} cliente${ctx.raw!==1?'s':''} (${Math.round(ctx.raw/allData.length*100)}%)`}}},cutout:'62%'}});
+    const legEl=document.getElementById('done-pie-legend');
+    if(legEl)legEl.innerHTML=mainSectors.map(([s,v],i)=>`<div style="display:flex;align-items:center;gap:4px;min-width:0"><span style="width:8px;height:8px;border-radius:50%;background:${DONE_PIE_COLORS[i]};flex-shrink:0"></span><span style="color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${h(s)}</span><span style="color:var(--t3);flex-shrink:0">${v}</span></div>`).join('');
+  }
+  // List
+  const listEl=document.getElementById('done-list');
+  if(!filtered.length){listEl.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:32px;text-align:center;color:var(--t3);font-size:13px">Sem clientes para este filtro.</div>';return;}
+  listEl.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+    <div style="display:grid;grid-template-columns:1fr 150px 180px 150px;padding:9px 16px;background:var(--s2);border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">
+      <span>Cliente</span><span>Setor</span><span>Subsetor</span><span>Satisfação</span></div>
+    ${filtered.map((c,i)=>`<div style="display:grid;grid-template-columns:1fr 150px 180px 150px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;background:${i%2===0?'var(--surface)':'var(--s2)'}">
+      <span style="font-size:13px;font-weight:500;color:var(--text)">${h(c.nome)}</span>
+      <span><span style="display:inline-block;font-size:11px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--t2)">${h(c.sector)}</span></span>
+      <span style="font-size:12px;color:var(--t3)">${h(c.sub||'—')}</span>
+      <span>${_satBadge(c.sat)}</span>
+    </div>`).join('')}
+  </div>`;
 }
 
 function fmtMeetDate(r){const d=r.data?new Date(r.data+'T00:00:00'):new Date();return d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'});}
