@@ -1073,14 +1073,20 @@ function openDashClientPanel(id){
 }
 function dashProjectPanelHTML(p){
   const labels=projectLabels(p),markets=projectMarkets(p),arabClients=projectArabClients(p),am=getAM(p.amId);
-  const totalR=p.mensal.r.reduce((a,b)=>a+b,0),totalC=p.mensal.c.reduce((a,b)=>a+b,0),comms=(S.comments[p.id]||[]).filter(c=>!c.deleted),pending=calEvents.filter(ev=>ev.projectId===p.id&&isFollowupReminder(ev)&&followStatus(ev)!=='feito'&&followStatus(ev)!=='novareuniao').length;
+  const projMeets=S.reunioes.filter(r=>r.projetoId===p.id);
+  const totalR=projMeets.length;
+  const totalC=p.mensal.c.reduce((a,b)=>a+b,0);
+  const scoredMeets=projMeets.filter(r=>r.score>=1&&r.score<=5);
+  const meetScoreAvg=scoredMeets.length?Number((scoredMeets.reduce((s,r)=>s+r.score,0)/scoredMeets.length).toFixed(1)):0;
+  const meetScoreRate=totalR?Math.round((scoredMeets.length/totalR)*100):0;
+  const comms=(S.comments[p.id]||[]).filter(c=>!c.deleted),pending=calEvents.filter(ev=>ev.projectId===p.id&&isFollowupReminder(ev)&&followStatus(ev)!=='feito'&&followStatus(ev)!=='novareuniao').length;
   return`<div class="dash-project-scroll"><div class="dash-project-top"><div><div class="modal-title">${h(p.nome)}</div><div style="font-size:12px;color:var(--t3);margin-top:2px">${h(p.cliente)} · ${h(am.name)} · Prazo: ${h(p.prazo)}</div></div><button class="btn" id="m-close"><i class="ti ti-arrow-left"></i>Voltar</button></div><div class="dash-project-card"><div class="proj-head" style="cursor:default;background:#e8f2f8"><div style="flex:1;min-width:120px"><div style="font-size:13px;font-weight:600;color:var(--text)">${h(p.nome)}</div><div style="font-size:11px;color:var(--t3);margin-top:1px">${h(p.cliente)} · Prazo: ${h(p.prazo)}</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><span class="pill ${SCLS[p.estado]}">${SLBL[p.estado]}</span><div style="width:90px"><div class="pbar"><div class="pbar-f" style="width:${p.pct}%;background:${SCOL[p.estado]}"></div></div></div><span style="font-size:11px;color:var(--t2);min-width:28px;text-align:right">${p.pct}%</span></div></div>
     <div class="kpi-strip">
       <div class="kpi-chip"><div class="kpi-v">${totalR}</div><div class="kpi-l">Reuniões</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:var(--amber)">${totalC}</div><div class="kpi-l">Pedidos de cotação</div></div>
       <div class="kpi-chip"><div class="kpi-v">${comms.length}</div><div class="kpi-l">Comentários</div></div>
-      <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${scoreAvg(p)||'—'}</div><div class="kpi-l">Score médio</div></div>
-      <div class="kpi-chip"><div class="kpi-v" style="color:var(--blue)">${scoreCollectionRate(p)}%</div><div class="kpi-l">Score recolhido</div></div>
+      <div class="kpi-chip"><div class="kpi-v" style="color:#6B55C8">${meetScoreAvg||'—'}</div><div class="kpi-l">Score médio</div></div>
+      <div class="kpi-chip"><div class="kpi-v" style="color:var(--blue)">${meetScoreRate}%</div><div class="kpi-l">Score recolhido</div></div>
       <div class="kpi-chip"><div class="kpi-v" style="color:var(--red)">${pending}</div><div class="kpi-l">Follow-ups pendentes</div></div>
       <div class="kpi-chip"><div class="kpi-v">${h(p.prazo||'—')}</div><div class="kpi-l">Deadline</div></div>
     </div>
