@@ -2116,7 +2116,7 @@ function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div clas
 
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
 
-function _chartDataFromMeetings(p){ensureMetricShape(p);const labels=projectLabels(p);const meetCounts=new Array(labels.length).fill(0);const scoreSums=new Array(labels.length).fill(0);const scoreCounts=new Array(labels.length).fill(0);S.reunioes.filter(r=>r.projetoId===p.id&&r.data).forEach(r=>{const i=projectMonthIndex(p,r.data);if(i>=0&&i<labels.length){meetCounts[i]++;const sc=normalizeScore(r.score);if(sc>0){scoreSums[i]+=sc;scoreCounts[i]++;}}});if(!meetCounts.some(Boolean)){(p.mensal?.r||[]).forEach((v,i)=>{if(i<labels.length)meetCounts[i]=v||0;});}const scoreData=scoreCounts.map((c,i)=>c?Number((scoreSums[i]/c).toFixed(1)):((p.mensal?.s?.[i]||0)>0?p.mensal.s[i]:null));const objectiveData=p.objMensal>0?labels.map(()=>Number(p.objMensal)):null;return{labels,meetCounts,scoreData,objectiveData};}
+function _chartDataFromMeetings(p){ensureMetricShape(p);const labels=projectLabels(p);const realCounts=new Array(labels.length).fill(0);const scoreSums=new Array(labels.length).fill(0);const scoreCounts=new Array(labels.length).fill(0);S.reunioes.filter(r=>r.projetoId===p.id&&r.data).forEach(r=>{const i=projectMonthIndex(p,r.data);if(i>=0&&i<labels.length){realCounts[i]++;const sc=normalizeScore(r.score);if(sc>0){scoreSums[i]+=sc;scoreCounts[i]++;}}});const meetCounts=labels.map((_,i)=>Math.max(realCounts[i]||0,p.mensal?.r?.[i]||0));const scoreData=scoreCounts.map((c,i)=>c?Number((scoreSums[i]/c).toFixed(1)):((p.mensal?.s?.[i]||0)>0?p.mensal.s[i]:null));const objectiveData=p.objMensal>0?labels.map(()=>Number(p.objMensal)):null;return{labels,meetCounts,scoreData,objectiveData};}
 function initChartScore2(p){ensureMetricShape(p);const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;const{labels,meetCounts,scoreData,objectiveData}=_chartDataFromMeetings(p);const datasets=[{label:'Reuniões',data:meetCounts,yAxisID:'y',borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'}];if(objectiveData)datasets.push({label:'Objetivo mensal',data:objectiveData,yAxisID:'y',borderColor:'#E11D48',backgroundColor:'transparent',borderDash:[7,5],tension:0,fill:false,borderWidth:2,pointRadius:0,spanGaps:true});datasets.push({label:'Score médio',data:scoreData,yAxisID:'score',borderColor:'#6B55C8',backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2.5,pointRadius:4,pointStyle:'star',pointBackgroundColor:'#6B55C8',spanGaps:true});CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:true,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}},score:{position:'right',min:0,max:4,ticks:{stepSize:1,font:{size:11},precision:0,color:'#6B55C8'},grid:{display:false}}}}});}
 window.addEventListener('resize',()=>Object.values(CHARTS).forEach(ch=>ch.resize()));
 function submitComm(pid){const ta=document.getElementById(`ci-${pid}`);const sel=document.getElementById(`cs-${pid}`);const p=getP(pid);if(!ta||!sel||!p||!canContributeProject(p))return alert('Esta sessão só pode comentar projetos onde participa.');const text=ta.value.trim();if(!text)return;if(!S.comments[pid])S.comments[pid]=[];const author=isAuthAdmin()?{name:'Gestor',init:'GM',color:'#E6F1FB',tc:'#185FA5'}:{name:activeAM().name,init:activeAM().init,color:activeAM().color,tc:activeAM().tc};S.comments[pid].push({id:Date.now()+''+Math.floor(Math.random()*1000),pid,author:author.name,authorInit:author.init,authorColor:author.color,authorTc:author.tc,type:sel.value,text,pinned:false,ts:Date.now(),deleted:false});ta.value='';save();const el=document.getElementById(`cml-${pid}`);if(el){const comms=(S.comments[pid]||[]).filter(c=>!c.deleted).sort((a,b)=>b.ts-a.ts);el.innerHTML=comms.length?comms.map(c=>commHTML(c)).join(''):`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">Sem comentários ainda.</div>`;}}
@@ -2972,34 +2972,37 @@ function openEditProj(id){
     <div class="form-row"><label class="form-lbl">Nota interna</label><textarea class="form-ta" id="f-nota">${p.nota||''}</textarea></div>
     <div class="form-row"><label class="form-lbl">Feedback final do cliente / projeto concluído</label><textarea class="form-ta" id="f-feedback" placeholder="Resumo do feedback recolhido, resultados, pontos fortes e melhorias...">${p.feedbackFinal||''}</textarea></div>
   `),()=>{
-    const editedMetrics={r:[],c:[],s:[],sc:[]};
-    editLabels.forEach((_,i)=>{
-      editedMetrics.r[i]=parseInt(document.getElementById(`fr-${i}`)?.value)||0;
-      editedMetrics.c[i]=parseInt(document.getElementById(`fc-${i}`)?.value)||0;
-      editedMetrics.s[i]=Math.min(4,Math.max(0,parseFloat(document.getElementById(`fs-${i}`)?.value)||0));
-      editedMetrics.sc[i]=editedMetrics.s[i]?Math.max(1,p.mensal.sc[i]||1):0;
-    });
-    p.nome=(document.getElementById('f-nome').value||'').trim()||p.nome;
-    p.cliente=(document.getElementById('f-cli').value||'').trim()||p.cliente;
-    p.mercados=splitMarkets(document.getElementById('f-mercados').value);
-    p.amId=parseInt(document.getElementById('f-am').value);
-    p.collaboratorAmIds=selectedCollaboratorIds().filter(id=>id!==p.amId);
-    p.estado=document.getElementById('f-est').value;
-    p.pct=Math.min(100,Math.max(0,parseInt(document.getElementById('f-pct').value)||0));
-    p.objMensal=Math.max(0,parseFloat(document.getElementById('f-obj').value)||0);
-    p.inicio=document.getElementById('f-inicio').value||p.inicio||myToMonthInput(inferStartMY(p));delete p.mensal.labels;
-    p.prazo=(document.getElementById('f-prazo').value||'').trim()||p.prazo;
-    if(isoToMY(p.prazo))p.deadlineDate=p.prazo;
-    p.nota=document.getElementById('f-nota').value.trim();
-    p.feedbackFinal=document.getElementById('f-feedback').value.trim();
-    p.clientInfo=(document.getElementById('f-client-info')?.value||'').trim();
-    p.clientContacts=readClientContacts();
-    const nextLabels=projectLabels(p);
-    const next={r:new Array(nextLabels.length).fill(0),c:new Array(nextLabels.length).fill(0),k:new Array(nextLabels.length).fill(0),s:new Array(nextLabels.length).fill(0),sc:new Array(nextLabels.length).fill(0),labels:nextLabels};
-    editLabels.forEach((label,i)=>{const j=nextLabels.indexOf(label);if(j>=0){next.r[j]=editedMetrics.r[i]||0;next.c[j]=editedMetrics.c[i]||0;next.s[j]=editedMetrics.s[i]||0;next.sc[j]=editedMetrics.sc[i]||0;}});
-    p.mensal={...p.mensal,...next};
-    destroyChart(p.id);
-    save();closeModal();renderView(VIEW);
+    try{
+      const editedMetrics={r:[],c:[],s:[],sc:[]};
+      editLabels.forEach((_,i)=>{
+        editedMetrics.r[i]=parseInt(document.getElementById(`fr-${i}`)?.value)||0;
+        editedMetrics.c[i]=parseInt(document.getElementById(`fc-${i}`)?.value)||0;
+        editedMetrics.s[i]=Math.min(4,Math.max(0,parseFloat(document.getElementById(`fs-${i}`)?.value)||0));
+        editedMetrics.sc[i]=editedMetrics.s[i]?Math.max(1,p.mensal.sc[i]||1):0;
+      });
+      p.nome=(document.getElementById('f-nome').value||'').trim()||p.nome;
+      p.cliente=(document.getElementById('f-cli').value||'').trim()||p.cliente;
+      p.mercados=splitMarkets(document.getElementById('f-mercados').value);
+      p.amId=parseInt(document.getElementById('f-am').value);
+      p.collaboratorAmIds=selectedCollaboratorIds().filter(id=>id!==p.amId);
+      p.estado=document.getElementById('f-est').value;
+      p.pct=Math.min(100,Math.max(0,parseInt(document.getElementById('f-pct').value)||0));
+      p.objMensal=Math.max(0,parseFloat(document.getElementById('f-obj').value)||0);
+      p.inicio=document.getElementById('f-inicio').value||p.inicio||myToMonthInput(inferStartMY(p));delete p.mensal.labels;
+      p.prazo=(document.getElementById('f-prazo').value||'').trim()||p.prazo;
+      const deadline=isoToMY(p.prazo);
+      if(deadline)p.deadlineDate=p.prazo;else delete p.deadlineDate;
+      p.nota=document.getElementById('f-nota').value.trim();
+      p.feedbackFinal=document.getElementById('f-feedback').value.trim();
+      p.clientInfo=(document.getElementById('f-client-info')?.value||'').trim();
+      p.clientContacts=readClientContacts();
+      const nextLabels=projectLabels(p);
+      const next={r:new Array(nextLabels.length).fill(0),c:new Array(nextLabels.length).fill(0),k:new Array(nextLabels.length).fill(0),s:new Array(nextLabels.length).fill(0),sc:new Array(nextLabels.length).fill(0),labels:nextLabels};
+      editLabels.forEach((label,i)=>{const j=nextLabels.indexOf(label);if(j>=0){next.r[j]=editedMetrics.r[i]||0;next.c[j]=editedMetrics.c[i]||0;next.s[j]=editedMetrics.s[i]||0;next.sc[j]=editedMetrics.sc[i]||0;}});
+      p.mensal={...p.mensal,...next};
+      destroyChart(p.id);
+      if(save()){closeModal();renderView(VIEW);}
+    }catch(err){console.error('Erro ao guardar projeto',err);alert('Não consegui guardar este projeto. Detalhe: '+(err?.message||err));}
   });
 }
 
