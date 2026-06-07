@@ -654,13 +654,14 @@ const THEME_STORE='maab_theme_v1';
 const USER_STORE='maab_users_v1';
 const IMPORT_BACKUP_STORE='maab_import_backup_v1';
 const SYNC_STORE='maab_sync_v1';
+const LOCAL_DIRTY_STORE='maab_local_dirty_v1';
 let SYNC_BUSY=false,SYNC_TIMER=null,SYNC_LAST_PULL=0;
 let AUTH=(()=>{try{return JSON.parse(localStorage.getItem(AUTH_STORE)||'null');}catch(e){return null;}})();
 migrateToRealMaabData();
 migrateOperationalData();
 loadMeetingFilters();
 
-function save(skipSync=false){S.lastSaved=Date.now();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){alert('Erro ao guardar.');}const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();if(!skipSync)scheduleCloudPush();}
+function save(skipSync=false){S.lastSaved=Date.now();let ok=false;try{localStorage.setItem(STORE,JSON.stringify(S));localStorage.setItem(LOCAL_DIRTY_STORE,String(S.lastSaved));ok=localStorage.getItem(STORE)!==null;}catch(e){alert('Erro ao guardar neste computador. Pode ser falta de espaço ou bloqueio do navegador.');return false;}const t=document.getElementById('toast');t.textContent=ok?'Guardado':'Erro ao guardar';t.classList.add('show');setTimeout(()=>{t.classList.remove('show');t.innerHTML='<i class="ti ti-check" style="font-size:13px"></i>Guardado';},2000);const el=document.getElementById('last-saved');if(el&&S.lastSaved){const d=new Date(S.lastSaved);el.textContent='Última vez: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}updateCommandStatus();if(!skipSync)scheduleCloudPush();return true;}
 function calculateCompletedMonths(entryDate,referenceDate=new Date()){
   const entry=new Date(entryDate+'T00:00:00'),ref=new Date(referenceDate);
   if(isNaN(entry)||entry>ref)return 0;
@@ -898,11 +899,13 @@ function syncReady(){const c=getSyncConfig();return !!(c.url&&c.key&&c.id);}
 function syncUrl(path='dashboard_state'){const c=getSyncConfig();return String(c.url||'').replace(/\/+$/,'')+'/rest/v1/'+path;}
 function syncHeaders(extra={}){const c=getSyncConfig();return{'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json',...extra};}
 function updateSyncBadge(){const b=document.getElementById('sync-btn');if(!b)return;const c=getSyncConfig();b.classList.toggle('btn-p',!!(c.url&&c.key&&c.id&&c.auto));b.title=c.url?'Sincronização ligada à base central':'Configurar sincronização central';}
-function cloudPayload(){return{version:STORE,savedAt:Date.now(),data:S,calendar:calEvents};}
+function localDirtyAt(){try{return Number(localStorage.getItem(LOCAL_DIRTY_STORE)||0)||0;}catch(e){return 0;}}
+function clearLocalDirty(){try{localStorage.removeItem(LOCAL_DIRTY_STORE);}catch(e){}}
+function cloudPayload(){return{version:STORE,savedAt:S.lastSaved||Date.now(),data:S,calendar:calEvents};}
 async function cloudFetchState(){const c=getSyncConfig();if(!syncReady())throw new Error('Sync sem configuração');const res=await fetch(syncUrl(`dashboard_state?id=eq.${encodeURIComponent(c.id)}&select=payload,updated_at`),{headers:syncHeaders({'Accept':'application/json'})});if(!res.ok)throw new Error('Não foi possível ler a base central');const rows=await res.json();return rows&&rows[0]?rows[0].payload:null;}
-async function cloudSaveState(){if(!syncReady()||SYNC_BUSY)return;SYNC_BUSY=true;try{const c=getSyncConfig();const body=JSON.stringify({id:c.id,payload:cloudPayload(),updated_at:new Date().toISOString()});const res=await fetch(syncUrl('dashboard_state'),{method:'POST',headers:syncHeaders({'Prefer':'resolution=merge-duplicates'}),body});if(!res.ok)throw new Error('Não foi possível gravar na base central');updateSyncBadge();}finally{SYNC_BUSY=false;}}
-function scheduleCloudPush(){const c=getSyncConfig();if(!c.auto||!syncReady())return;clearTimeout(SYNC_TIMER);SYNC_TIMER=setTimeout(()=>cloudSaveState().catch(e=>console.warn(e)),900);}
-async function pullCloudState(force=false){if(!syncReady())return false;if(Date.now()-SYNC_LAST_PULL<2500&&!force)return false;SYNC_LAST_PULL=Date.now();const payload=await cloudFetchState();if(!payload||!payload.data)return false;const remoteSaved=payload.savedAt||payload.data.lastSaved||0;if(!force&&remoteSaved<=(S.lastSaved||0))return false;S=payload.data;calEvents=Array.isArray(payload.calendar)?payload.calendar:calEvents;migrateToRealMaabData();if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=[];S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});cleanGenericProjectNames();try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}calSave();initSessionUI();renderView(VIEW);updateCommandStatus();return true;}
+async function cloudSaveState(){if(!syncReady()||SYNC_BUSY)return;SYNC_BUSY=true;try{const c=getSyncConfig();const payload=cloudPayload();const body=JSON.stringify({id:c.id,payload,updated_at:new Date(payload.savedAt||Date.now()).toISOString()});const res=await fetch(syncUrl('dashboard_state'),{method:'POST',headers:syncHeaders({'Prefer':'resolution=merge-duplicates'}),body});if(!res.ok)throw new Error('Não foi possível gravar na base central');clearLocalDirty();updateSyncBadge();}finally{SYNC_BUSY=false;}}
+function scheduleCloudPush(){const c=getSyncConfig();if(!c.auto||!syncReady())return;clearTimeout(SYNC_TIMER);SYNC_TIMER=setTimeout(()=>cloudSaveState().catch(e=>console.warn(e)),250);}
+async function pullCloudState(force=false){if(!syncReady())return false;if(Date.now()-SYNC_LAST_PULL<2500&&!force)return false;SYNC_LAST_PULL=Date.now();const payload=await cloudFetchState();if(!payload||!payload.data)return false;const remoteSaved=payload.savedAt||payload.data.lastSaved||0;const dirty=localDirtyAt();if(!force&&dirty&&dirty>=remoteSaved){scheduleCloudPush();return false;}if(!force&&remoteSaved<=(S.lastSaved||0))return false;S=payload.data;calEvents=Array.isArray(payload.calendar)?payload.calendar:calEvents;migrateToRealMaabData();if(!S.comments)S.comments={};if(!Array.isArray(S.reunioes))S.reunioes=[];S.projetos.forEach(p=>{if(!S.comments[p.id])S.comments[p.id]=[];ensureMetricShape(p);});cleanGenericProjectNames();try{localStorage.setItem(STORE,JSON.stringify(S));clearLocalDirty();}catch(e){}calSave();initSessionUI();renderView(VIEW);updateCommandStatus();return true;}
 async function pushCloudNow(){try{await cloudSaveState();alert('Dados enviados para a base central.');}catch(e){alert('Não consegui gravar na base central. Confirma URL, chave e tabela.');}}
 async function pullCloudNow(){try{const ok=await pullCloudState(true);alert(ok?'Dados recebidos da base central.':'Não encontrei dados na base central.');}catch(e){alert('Não consegui ler a base central. Confirma URL, chave e tabela.');}}
 function copySyncSQL(){const sql=`create table if not exists dashboard_state (
@@ -3128,6 +3131,7 @@ function calAddEvent(){
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser();});
 document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser();});
 window.addEventListener('focus',()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));});
+document.addEventListener('visibilitychange',()=>{const c=getSyncConfig();if(document.visibilityState==='hidden'&&c.auto&&syncReady()&&localDirtyAt())cloudSaveState().catch(e=>console.warn(e));});
 setInterval(()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));},30000);
 if(requireAuth()){cleanGenericProjectNames();initSessionUI();renderGM();renderView(VIEW);setTimeout(()=>{const c=getSyncConfig();if(c.auto&&syncReady())pullCloudState(false).catch(e=>console.warn(e));},700);}
 </script>
@@ -3135,7 +3139,6 @@ if(requireAuth()){cleanGenericProjectNames();initSessionUI();renderGM();renderVi
 
 
 </body><div id="codex-browser-sidebar-comments-root" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483000;"></div></html>
-
 
 
 
