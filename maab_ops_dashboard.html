@@ -201,6 +201,11 @@ body[data-theme="dark"] .sb-logo{color:var(--text)}
 .ni i{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;color:var(--green);font-size:15px;flex:0 0 20px}.ni:hover{background:var(--s2);color:var(--text)}
 .ni.active{background:var(--primary);color:#fff}.ni.active i{color:#fff}
 body[data-theme="dark"] .ni{color:#d7dedb}body[data-theme="dark"] .ni:hover{background:#202927;color:#fff}body[data-theme="dark"] .ni:not(.active) i{color:#34d399}body[data-theme="dark"] .sb-sec{color:#a7b2bd}
+body.icons-fallback .ti:before{content:''!important}
+body.icons-fallback .ti{width:0!important;min-width:0!important;margin:0!important;overflow:hidden!important}
+body.icons-fallback .ni .ti{width:18px!important;min-width:18px!important;border-radius:6px;background:var(--green);opacity:.9}
+body.icons-fallback .ni.active .ti{background:#fff}
+body.icons-fallback .btn .ti,body.icons-fallback .icon-btn .ti,body.icons-fallback .cmd-search .ti{display:none!important}
 .nb{background:var(--red);padding:3px 8px}
 .sb-foot{border-top:0;padding:14px 20px 22px}
 .cmdbar{height:84px;margin:0 -28px 26px;padding:16px 28px;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -3239,7 +3244,7 @@ if(requireAuth()){cleanGenericProjectNames();initSessionUI();renderGM();renderVi
 
 
 
-</body><div id="codex-browser-sidebar-comments-root" style="position: fixed; inset: 0px; pointer-events: none; z-index: 2147483000;"></div></html>
+</body></html>
 
 
 
