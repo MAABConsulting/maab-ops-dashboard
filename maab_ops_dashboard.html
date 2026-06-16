@@ -275,9 +275,16 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
 .ct-cotacao{background:var(--amber-bg);color:var(--amber)}.ct-alerta{background:var(--red-bg);color:var(--red)}.ct-nota{background:var(--gray-bg);color:var(--gray-t)}
 .c-text{font-size:13px;color:var(--text);line-height:1.5}.c-acts{display:flex;gap:5px;margin-top:5px}
 .pin-note{font-size:11px;color:var(--blue);display:flex;align-items:center;gap:3px;margin-bottom:2px}
-.comm-month{padding-top:10px;margin-top:2px;border-top:1px solid var(--border)}
-.comm-month:first-child{border-top:none;margin-top:0}
-.comm-month-title{font-size:11px;color:var(--t3);font-weight:500;text-transform:uppercase;letter-spacing:.45px;margin-bottom:4px}
+.comm-month{border-top:1px solid var(--border)}
+.comm-month:first-child{border-top:none}
+.comm-month-head{width:100%;border:0;background:var(--s2);color:var(--t2);padding:9px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left}
+.comm-month-head:hover{background:var(--blue-bg);color:var(--blue)}
+.comm-month-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.45px}
+.comm-month-count{font-size:11px;color:var(--t3);font-weight:500}
+.comm-month-body{padding:0 18px}
+.comm-month.closed .comm-month-body{display:none}
+.comm-month.closed .comm-month-head i{transform:rotate(-90deg)}
+.comm-month-head i{font-size:14px;transition:transform .15s;color:var(--t3)}
 .comm-compose{padding:12px 18px;border-top:1px solid var(--border);background:var(--s2);display:flex;gap:8px;align-items:flex-start}
 .compose-in{flex:1;border:1px solid var(--b2);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);background:var(--surface);resize:none;min-height:50px;line-height:1.5}
 .compose-in:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
@@ -305,7 +312,7 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
 .cal-leg{display:flex;gap:10px;flex-wrap:wrap}
 .cal-leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
 .cal-leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.cal-grid{display:grid;grid-template-columns:52px repeat(5,1fr);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;background:var(--surface)}
+.cal-grid{display:grid;grid-template-columns:58px repeat(5,minmax(150px,1fr));border:1px solid var(--border);border-radius:var(--rl);overflow:auto;background:var(--surface)}
 .ch-empty{background:var(--s2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:7px 4px}
 .ch-day{background:var(--s2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:7px 6px;text-align:center}
 .ch-day:last-child{border-right:none}
@@ -313,14 +320,16 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
 .cal-day-num{font-size:17px;font-weight:500;color:var(--text);line-height:1.2}
 .cal-today-num{background:var(--blue);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:2px auto 0;font-size:13px;font-weight:500}
 .cal-time-col{border-right:1px solid var(--border)}
-.cal-time-slot{height:50px;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 5px 0 0;font-size:10px;color:var(--t3);border-bottom:1px solid var(--border)}
+.cal-time-slot{height:64px;display:flex;align-items:flex-start;justify-content:flex-end;padding:5px 8px 0 0;font-size:11px;color:var(--t3);border-bottom:1px solid var(--border)}
 .cal-time-slot:last-child{border-bottom:none}
 .cal-day-col{border-right:1px solid var(--border);position:relative}
 .cal-day-col:last-child{border-right:none}
-.cal-hour-cell{height:50px;border-bottom:1px solid var(--border)}
+.cal-hour-cell{height:64px;border-bottom:1px solid var(--border)}
 .cal-hour-cell:last-child{border-bottom:none}
-.cal-event{position:absolute;left:2px;right:2px;border-radius:5px;padding:2px 5px;font-size:11px;font-weight:500;cursor:pointer;overflow:hidden;z-index:1;transition:opacity .15s;line-height:1.3;border-left:3px solid}
-.cal-event:hover{opacity:.8;z-index:5}
+.cal-event{position:absolute;left:5px;right:5px;border-radius:7px;padding:5px 7px;font-size:11px;font-weight:700;cursor:pointer;overflow:hidden;z-index:1;transition:opacity .15s,box-shadow .15s;line-height:1.25;border-left:4px solid;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.cal-event:hover{opacity:.95;z-index:5;box-shadow:0 4px 12px rgba(15,23,42,.15)}
+.cal-event-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-event-note{display:block;font-size:10px;font-weight:500;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .ev-tarefa{background:var(--blue-bg);color:#0C447C;border-color:var(--blue)}
 .ev-reuniao{background:var(--green-bg);color:#27500A;border-color:var(--green)}
 .ev-alerta{background:var(--red-bg);color:#791F1F;border-color:var(--red)}
@@ -565,7 +574,7 @@ const MEETING_FILTER_STORE='maab_meeting_filters_v1';
 const MEETING_DEFAULT_FILTERS={account:'all',client:'all',externalCompany:'all',country:'all',month:new Date().toISOString().slice(0,7),status:'all',score:'all',followUpStatus:'all',sort:'default'};
 let MEETING_FILTERS={...MEETING_DEFAULT_FILTERS};
 const MEETING_SCORE_LABELS={1:'Baixo interesse',2:'Interesse limitado',3:'Interesse moderado',4:'Bom potencial'};
-const CT={update:{l:'Atualização',c:'ct-update'},reuniao:{l:'Reunião',c:'ct-reuniao'},status:{l:'Reunião de status',c:'ct-status'},cotacao:{l:'Cotação',c:'ct-cotacao'},alerta:{l:'Alerta',c:'ct-alerta'},nota:{l:'Nota',c:'ct-nota'}};
+const CT={update:{l:'Atualização',c:'ct-update'},reuniao:{l:'Reunião',c:'ct-reuniao'},status:{l:'Reunião de status',c:'ct-status'},cotacao:{l:'Pedido de cotação',c:'ct-cotacao'},alerta:{l:'Alerta',c:'ct-alerta'},nota:{l:'Nota',c:'ct-nota'}};
 const AM_COL={urg:{cls:'al-urg',ic:'ti-alert-triangle',col:'#A32D2D'},warn:{cls:'al-warn',ic:'ti-clock',col:'#854F0B'},info:{cls:'al-info',ic:'ti-info-circle',col:'#185FA5'},ok:{cls:'al-ok',ic:'ti-check',col:'#2d7a3a'}};
 const NEXT_ACTIONS={none:{l:'Sem proximo passo',needsFollow:false},followup:{l:'Follow-up',needsFollow:true},proposta:{l:'Enviar proposta',needsFollow:true},reuniao:{l:'Marcar nova reuniao',needsFollow:true},resposta:{l:'Aguardar resposta',needsFollow:true}};
 const CHARTS={};
@@ -2090,9 +2099,9 @@ function buildProjBlock(p,am){
       </div>
       <div class="comm-compose">
         <div class="av" style="width:28px;height:28px;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:500;flex-shrink:0;margin-top:2px">GM</div>
-        <textarea class="compose-in" id="ci-${p.id}" placeholder="Adicione atualização, reunião de status, cotação, alerta… (Ctrl+Enter para publicar)" rows="2"></textarea>
+        <textarea class="compose-in" id="ci-${p.id}" placeholder="Adicione atualização, reunião de status, pedido de cotação, alerta… (Ctrl+Enter para publicar)" rows="2"></textarea>
         <div class="compose-right">
-          <select class="btn btn-sm" id="cs-${p.id}" style="border:1px solid var(--b2)"><option value="update">Atualização</option><option value="reuniao">Reunião</option><option value="status">Reunião de status</option><option value="cotacao">Cotação</option><option value="alerta">Alerta</option><option value="nota">Nota</option></select>
+          <select class="btn btn-sm" id="cs-${p.id}" style="border:1px solid var(--b2)"><option value="update">Atualização</option><option value="reuniao">Reunião</option><option value="status">Reunião de status</option><option value="cotacao">Pedido de cotação</option><option value="alerta">Alerta</option><option value="nota">Nota</option></select>
           <button class="btn btn-p btn-sm" onclick="submitComm(${p.id})"><i class="ti ti-send"></i>Publicar</button>
         </div>
       </div>
@@ -2127,7 +2136,8 @@ function buildProjBlock(p,am){
 }
 
 function commMonthLabel(ts){const d=new Date(ts||Date.now());if(isNaN(d))return'Sem data';return d.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});}
-function commentsByMonthHTML(comms,empty='Sem comentários ainda.'){const list=[...(comms||[])].filter(c=>!c.deleted).sort((a,b)=>(b.ts||0)-(a.ts||0));if(!list.length)return`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">${empty}</div>`;const groups={};list.forEach(c=>{const key=commMonthLabel(c.ts);if(!groups[key])groups[key]=[];groups[key].push(c);});return Object.entries(groups).map(([month,items])=>`<div class="comm-month"><div class="comm-month-title">${h(month)}</div>${items.map(c=>commHTML(c)).join('')}</div>`).join('');}
+function toggleCommMonth(btn){const box=btn.closest('.comm-month');if(box)box.classList.toggle('closed');}
+function commentsByMonthHTML(comms,empty='Sem comentários ainda.'){const list=[...(comms||[])].filter(c=>!c.deleted).sort((a,b)=>(b.ts||0)-(a.ts||0));if(!list.length)return`<div style="padding:1.5rem;text-align:center;color:var(--t3);font-size:13px">${empty}</div>`;const groups={};list.forEach(c=>{const key=commMonthLabel(c.ts);if(!groups[key])groups[key]=[];groups[key].push(c);});return Object.entries(groups).map(([month,items],i)=>`<div class="comm-month${i>0?' closed':''}"><button type="button" class="comm-month-head" onclick="toggleCommMonth(this)"><span class="comm-month-title">${h(month)}</span><span style="display:flex;align-items:center;gap:8px"><span class="comm-month-count">${items.length} comentário${items.length!==1?'s':''}</span><i class="ti ti-chevron-down"></i></span></button><div class="comm-month-body">${items.map(c=>commHTML(c)).join('')}</div></div>`).join('');}
 function commHTML(c){const m=CT[c.type]||{l:'Nota',c:'ct-nota'};return`<div class="comm-item" id="ci2-${c.id}"><div class="av" style="width:28px;height:28px;background:${c.authorColor};color:${c.authorTc};font-size:10px">${c.authorInit}</div><div class="c-body">${c.pinned?`<div class="pin-note"><i class="ti ti-pin" style="font-size:11px"></i>Fixado</div>`:''}<div class="c-meta"><span class="c-author">${c.author}</span><span class="c-type ${m.c}">${m.l}</span><span class="c-time">${tsR(c.ts)}</span></div><div class="c-text">${c.text}</div><div class="c-acts"><button class="btn btn-sm${c.pinned?' btn-p':''}" onclick="togglePin('${c.id}',${c.pid})"><i class="ti ti-pin"></i>${c.pinned?'Desafixar':'Fixar'}</button><button class="btn btn-sm btn-d" onclick="delComm('${c.id}',${c.pid})"><i class="ti ti-trash"></i></button></div></div></div>`;}
 
 function initChart(p){const cid='ch-'+p.id;if(CHARTS[cid])return;const ctx=document.getElementById(cid);if(!ctx)return;CHARTS[cid]=new Chart(ctx,{type:'line',data:{labels:MN,datasets:[{label:'Reuniões',data:p.mensal.r,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.15)',tension:.35,fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#378ADD',pointStyle:'circle'},{label:'Cotações',data:p.mensal.c,borderColor:'#BA7517',borderDash:[6,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'triangle',pointBackgroundColor:'#BA7517'},{label:'Contratos',data:p.mensal.k,borderColor:'#1D9E75',borderDash:[2,3],backgroundColor:'transparent',tension:.35,fill:false,borderWidth:2,pointRadius:4,pointStyle:'rect',pointBackgroundColor:'#1D9E75'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11},autoSkip:false,maxRotation:0}},y:{min:0,ticks:{stepSize:1,font:{size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}}});}
@@ -3118,7 +3128,7 @@ function openAddTask(){openModal(mS('Nova tarefa',`<div class="form-row"><label 
 const CAL_STORE='maab_cal_v2';
 const CAL_HOURS=[8,9,10,11,12,13,14,15,16,17,18];
 const CAL_DAYS_PT=['Segunda','Terça','Quarta','Quinta','Sexta'];
-const CAL_SLOT=50;
+const CAL_SLOT=64;
 const EV_TYPES={tarefa:'ev-tarefa',reuniao:'ev-reuniao',alerta:'ev-alerta',prazo:'ev-prazo',nota:'ev-nota'};
 let calBaseMonday=calGetMonday(new Date());
 let calEvents=calLoadEvents();
@@ -3185,12 +3195,12 @@ function renderCalendario(){
     calVisibleEvents().filter(ev=>{const ed=new Date(ev.ts);return ed>=dayStart&&ed<dayEnd;}).forEach(ev=>{
       const ed=new Date(ev.ts);
       const top=(ed.getHours()-CAL_HOURS[0])*CAL_SLOT+(ed.getMinutes()/60)*CAL_SLOT;
-      const height=Math.max(22,(ev.dur/60)*CAL_SLOT-2);
+      const height=Math.max(34,(ev.dur/60)*CAL_SLOT-5);
       const el=document.createElement('div');
       el.className='cal-event '+(EV_TYPES[ev.type]||'ev-nota')+' '+followStatusClass(ev);
       el.style.top=top+'px';el.style.height=height+'px';
       const stTxt=isFollowupReminder(ev)?` · ${(FST[followStatus(ev)]||FST.aberto).l}`:'';
-      el.innerHTML=`${ev.title}<div class="ev-time">${calFmtH(ev.ts)} · ${ev.dur}min${stTxt}</div>`;
+      el.innerHTML=`<span class="cal-event-title">${h(ev.title)}</span><span class="cal-event-note">${calFmtH(ev.ts)} · ${ev.dur}min${stTxt}</span>`;
       el.title=isFollowupReminder(ev)?`${ev.title} — clique para atualizar o estado.`:(ev.generated?`${ev.title} — ${calFmtH(ev.ts)}. Criado no controlo de reuniões.`:`${ev.title} — ${calFmtH(ev.ts)}. Clique para apagar.`);
       el.onclick=e=>{e.stopPropagation();if(isFollowupReminder(ev))return openFollowupStatus(ev.id);if(ev.generated)return;if(confirm(`Apagar "${ev.title}"?`)){calEvents=calEvents.filter(x=>x.id!==ev.id);calSave();renderCalendario();}};
       col.appendChild(el);
