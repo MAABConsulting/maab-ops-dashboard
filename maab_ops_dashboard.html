@@ -1100,8 +1100,51 @@ function countryStats(){const map={};activeProjects().forEach(p=>projectMarkets(
 function radarMap(stats){return`<img alt="Mapa do mundo árabe" src="https://www.figma.com/api/mcp/asset/492f255a-bac4-4a6a-8851-5037e36c4611">`;}
 function exportMeetingsByCountry(){const rows=[['País','Reuniões','Projetos']];countryStats().forEach(([country,total])=>rows.push([country,total,activeProjects().filter(p=>projectMarkets(p).includes(country)).map(p=>p.cliente).join(', ')]));downloadXls('maab-reunioes-por-pais.xls',[xlsSheet('Reunioes por pais',rows)]);}
 function satColor(v){return v>=75?'#10B981':v>=50?'#e0a21a':'#e11d48';}
+function amDashDate(v){const d=v instanceof Date?v:new Date(v);return isNaN(d)?'Sem data':d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});}
+function amDashRow(items,empty,fn){return items.length?items.map(fn).join(''):`<div class="am-dash-empty">${empty}</div>`;}
+function amMeetingDate(r){return new Date((r.data||localDateISO(new Date()))+'T'+(r.hora||'09:00'));}
+function amDashboardProjects(amId){return S.projetos.filter(p=>isProjectParticipant(p,amId));}
+function amDashboardMeetings(amId){return(S.reunioes||[]).filter(r=>Number(r.amId)===Number(amId)||isProjectParticipant(getP(r.projetoId),amId));}
+function amDashboardFollowups(amId){return(calEvents||[]).filter(ev=>isFollowupReminder(ev)&&(Number(ev.ownerAmId)===Number(amId)||isProjectParticipant(getP(ev.projectId),amId)));}
+function amProjectObjectiveRows(projects){return projects.map(p=>{const obj=projectMonthlyObjective(p);return obj?{p,...obj}:null;}).filter(Boolean).sort((a,b)=>(a.done/a.target)-(b.done/b.target));}
+function amRecentComments(projects){const ids=new Set(projects.map(p=>Number(p.id))),out=[];Object.entries(S.comments||{}).forEach(([pid,items])=>{if(!ids.has(Number(pid)))return;const p=getP(pid);(items||[]).filter(c=>!c.deleted).forEach(c=>out.push({...c,p}));});return out.sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,6);}
+function renderAccountDashboard(amId){
+  const root=document.getElementById('dashboard-root');if(!root)return;
+  const am=getAM(amId),projects=amDashboardProjects(amId),current=projects.filter(p=>p.estado!=='concluido'),completed=projects.filter(p=>p.estado==='concluido');
+  const meetings=amDashboardMeetings(amId),now=new Date(),today=new Date();today.setHours(0,0,0,0);
+  const upcomingMeetings=meetings.filter(r=>!['cancelada','realizada'].includes(r.status)&&amMeetingDate(r)>=today).sort((a,b)=>amMeetingDate(a)-amMeetingDate(b)).slice(0,6);
+  const allFollowups=amDashboardFollowups(amId).filter(ev=>!['feito','novareuniao'].includes(followStatus(ev))).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const overdueFollowups=allFollowups.filter(ev=>(ev.ts||0)<today.getTime());
+  const riskProjects=current.filter(isProjectAtRisk).sort((a,b)=>projectRiskReasons(b).length-projectRiskReasons(a).length);
+  const objectiveRows=amProjectObjectiveRows(current).slice(0,6);
+  const nextSteps=[
+    ...upcomingMeetings.map(r=>({date:amMeetingDate(r).getTime(),title:r.proximo||r.nota||r.titulo,client:getP(r.projetoId)?.cliente||r.titulo,kind:'Reunião'})),
+    ...allFollowups.map(ev=>({date:ev.ts,title:ev.note||ev.title,client:getP(ev.projectId)?.cliente||'',kind:'Follow-up',id:ev.id}))
+  ].sort((a,b)=>a.date-b.date).slice(0,6);
+  const comments=amRecentComments(projects);
+  const monthMeetings=meetings.filter(r=>{const d=amMeetingDate(r);return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();}).length;
+  const scored=meetings.map(r=>normalizeScore(r.score)).filter(v=>v>0);
+  const avgScore=scored.length?Number((scored.reduce((a,b)=>a+b,0)/scored.length).toFixed(1)):'—';
+  root.innerHTML=`<div class="topbar"><div><div class="ptitle">Dashboard do AM</div><div class="psub">${h(am.name)} · visão operacional pessoal</div></div><div class="dash-actions"><button class="btn btn-p" onclick="goView('reunioes')"><i class="ti ti-video-plus"></i>Registar reunião</button><button class="btn" onclick="goView('calendario')"><i class="ti ti-calendar"></i>Calendário</button></div></div>
+  <section class="dash-grid">
+    ${dashMetric('PROJETOS ATIVOS',current.length,'','Ver projetos','ti-briefcase',`goView('equipa')`)}
+    ${dashMetric('REUNIÕES ESTE MÊS',monthMeetings,'','Ver reuniões','ti-video',`goView('reunioes')`)}
+    ${dashMetric('FOLLOW-UPS VENCIDOS',overdueFollowups.length,'','Abrir calendário','ti-clock-exclamation',`goView('calendario')`)}
+    ${dashMetric('SCORE MÉDIO',avgScore,'','Ver clientes','ti-star',`goView('pipeline')`)}
+  </section>
+  <section class="am-dash" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-video"></i>Reuniões pendentes</div>${amDashRow(upcomingMeetings,'Sem reuniões pendentes.',r=>`<div class="am-dash-row"><b>${amDashDate(amMeetingDate(r))}</b> · ${h(r.titulo)}<br><span style="color:var(--t3)">${h(getP(r.projetoId)?.cliente||'Sem cliente')}</span></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-clock-exclamation"></i>Follow-ups para tratar</div>${amDashRow(allFollowups.slice(0,6),'Sem follow-ups abertos.',ev=>`<div class="am-dash-row" style="cursor:pointer" onclick="openFollowupStatus('${h(ev.id)}')"><b>${amDashDate(ev.ts)}</b> · ${h(getP(ev.projectId)?.cliente||ev.title)}<br><span class="pill ${(FST[followStatus(ev)]||FST.aberto).c}" style="font-size:10px;padding:1px 7px">${(FST[followStatus(ev)]||FST.aberto).l}</span> <span style="color:var(--t3)">${h(ev.note||ev.title)}</span></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-alert-triangle"></i>Clientes em atenção</div>${amDashRow(riskProjects.slice(0,6),'Sem clientes em risco.',p=>`<div class="am-dash-row"><b>${h(p.cliente||p.nome)}</b><br>${h(projectRiskReasons(p)[0]?.text||'Rever projeto')} · ${p.pct}%</div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-target-arrow"></i>Objetivos do mês</div>${amDashRow(objectiveRows,'Sem objetivos definidos para este mês.',o=>`<div class="am-dash-row"><b>${h(o.p.cliente||o.p.nome)}</b><br>${o.done}/${o.target} reuniões <span style="color:var(--t3)">(${Math.min(100,Math.round((o.done/o.target)*100))}%)</span><div class="pbar" style="margin-top:5px"><div class="pbar-f" style="width:${Math.min(100,Math.round((o.done/o.target)*100))}%;background:var(--green)"></div></div></div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-list-check"></i>Próximos passos</div>${amDashRow(nextSteps,'Sem próximos passos registados.',x=>`<div class="am-dash-row"${x.id?` style="cursor:pointer" onclick="openFollowupStatus('${h(x.id)}')"`:''}><b>${amDashDate(x.date)}</b> · ${h(x.kind)}<br><span style="color:var(--t3)">${h(x.client)}</span><br>${h(String(x.title||'').slice(0,120))}${String(x.title||'').length>120?'...':''}</div>`)}</div>
+    <div class="am-dash-card"><div class="am-dash-title"><i class="ti ti-message-2"></i>Últimas notas</div>${amDashRow(comments,'Sem comentários recentes.',c=>`<div class="am-dash-row"><b>${amDashDate(c.ts)}</b> · ${h(c.p?.cliente||'Projeto')}<br><span class="pill ${(CT[c.type]||CT.nota).c}" style="font-size:10px;padding:1px 7px">${h((CT[c.type]||CT.nota).l)}</span> ${h(String(c.text||'').slice(0,110))}${String(c.text||'').length>110?'...':''}</div>`)}</div>
+  </section>
+  <section class="dash-table-wrap"><div class="dash-table-head"><div class="dash-table-title">Carteira do AM (${projects.length})</div><div style="font-size:12px;color:var(--t3)">${completed.length} concluído${completed.length!==1?'s':''}</div></div><table class="dash-table"><thead><tr><th>Cliente</th><th>Estado</th><th>Progresso</th><th>Reuniões</th><th>Follow-ups</th><th>Próximo passo</th></tr></thead><tbody>${current.map(p=>{const fu=projectOpenFollowupEvents(p);const last=amDashboardMeetings(amId).filter(r=>Number(r.projetoId)===Number(p.id)).sort((a,b)=>amMeetingDate(b)-amMeetingDate(a))[0];return`<tr onclick="openDashClientPanel(${p.id})"><td><button class="dash-client-btn" onclick="event.stopPropagation();openDashClientPanel(${p.id})">${h(p.cliente||p.nome)}</button><br><span style="color:var(--t3);font-size:11px">${h(p.nome)}</span></td><td><span class="pill ${SCLS[p.estado]}">${SLBL[p.estado]}</span></td><td><div class="pbar"><div class="pbar-f" style="width:${p.pct}%;background:${SCOL[p.estado]}"></div></div><span style="font-size:11px;color:var(--t3)">${p.pct}%</span></td><td>${activeProjectMeetings(p).length}</td><td>${fu.length}</td><td>${h(String(last?.proximo||last?.nota||p.nota||'Sem próximo passo').slice(0,90))}</td></tr>`;}).join('')}</tbody></table></section>`;
+}
 function renderDashboard(){
   const root=document.getElementById('dashboard-root');if(!root)return;
+  if(!isAdmin()&&activeAmId())return renderAccountDashboard(activeAmId());
   const ps=dashboardTeamProjects(),all=dashboardProjects(),clients=new Set(dashboardProjects().map(p=>p.cliente||p.nome)).size,cm=meetingMonthCount(currentMonth()),pm=meetingMonthCount(previousMonth());
   const activeClients=dashboardProjects().filter(p=>p.status!=='scheduled').length,scheduledClients=dashboardProjects().filter(p=>p.status==='scheduled').length;
   const riskClients=new Set(dashboardProjects().filter(isProjectAtRisk).map(p=>p.cliente||p.nome)).size;
