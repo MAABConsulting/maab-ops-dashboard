@@ -462,6 +462,7 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
     <div class="topbar"><div><div class="ptitle">Controle de Reuniões</div><div class="psub">Acompanhe reuniões realizadas, reuniões agendadas, follow-ups e próximos passos por account, cliente e empresa.</div></div><button class="btn btn-p" onclick="openMeetingForm()"><i class="ti ti-plus"></i>Nova reunião</button></div>
     <div class="card" style="padding:12px 14px">
       <div class="meet-filters">
+        <div style="grid-column:1/-1"><div class="meet-filter-lbl">Pesquisar</div><input class="form-in" id="meet-fil-search" type="search" placeholder="Escrever nome da empresa, cliente, projeto, contacto, país ou nota..." oninput="setMeetingFilter('query',this.value)"></div>
         <div><div class="meet-filter-lbl">Account</div><select class="form-sel" id="meet-fil-am" onchange="setMeetingFilter('account',this.value)"></select></div>
         <div><div class="meet-filter-lbl">Cliente/projeto MAAB</div><select class="form-sel" id="meet-fil-client" onchange="setMeetingFilter('client',this.value)"></select></div>
         <div><div class="meet-filter-lbl">Empresa reunida</div><select class="form-sel" id="meet-fil-company" onchange="setMeetingFilter('externalCompany',this.value)"></select></div>
@@ -571,7 +572,7 @@ const SCLS={active:'p-ok',risco:'p-hot',concluido:'p-ok',pausa:'p-gray',inicio:'
 const SLBL={active:'Em curso',risco:'Em risco',concluido:'Concluído',pausa:'Em pausa',inicio:'Início'};
 const MST={agendada:{l:'Agendada',c:'p-info'},realizada:{l:'Realizada',c:'p-ok'},cancelada:{l:'Cancelada',c:'p-hot'},reagendada:{l:'Reagendada',c:'p-info'},followup:{l:'Follow-up pendente',c:'p-warn'},concluida:{l:'Concluída',c:'p-ok'}};
 const MEETING_FILTER_STORE='maab_meeting_filters_v1';
-const MEETING_DEFAULT_FILTERS={account:'all',client:'all',externalCompany:'all',country:'all',month:new Date().toISOString().slice(0,7),status:'all',score:'all',followUpStatus:'all',sort:'default'};
+const MEETING_DEFAULT_FILTERS={account:'all',client:'all',externalCompany:'all',country:'all',month:new Date().toISOString().slice(0,7),status:'all',score:'all',followUpStatus:'all',sort:'default',query:''};
 let MEETING_FILTERS={...MEETING_DEFAULT_FILTERS};
 const MEETING_SCORE_LABELS={1:'Baixo interesse',2:'Interesse limitado',3:'Interesse moderado',4:'Bom potencial'};
 const CT={update:{l:'Atualização',c:'ct-update'},reuniao:{l:'Reunião',c:'ct-reuniao'},status:{l:'Reunião de status',c:'ct-status'},cotacao:{l:'Pedido de cotação',c:'ct-cotacao'},alerta:{l:'Alerta',c:'ct-alerta'},nota:{l:'Nota',c:'ct-nota'}};
@@ -2125,7 +2126,7 @@ function buildProjBlock(p,am){
   const meetScoreAvg=meetScores.length?(meetScores.reduce((a,b)=>a+b,0)/meetScores.length).toFixed(1):null;
 
   const head=document.createElement('div');head.className='proj-head';
-  head.innerHTML=`<div style="flex:1;min-width:120px"><div style="font-size:13px;font-weight:500;color:var(--text)">${p.nome}</div><div style="font-size:11px;color:var(--t3);margin-top:1px"><i class="ti ti-building" style="font-size:11px;margin-right:2px"></i>${p.cliente} · Responsável: ${h(getAM(p.amId).name)}${projectCollaboratorIds(p).length?' · Colab.: '+projectCollaboratorIds(p).map(id=>h(getAM(id).name)).join(', '):''} · Prazo: ${p.prazo}</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><span class="pill ${SCLS[p.estado]}">${SLBL[p.estado]}</span><div style="width:90px"><div class="pbar"><div class="pbar-f" style="width:${p.pct}%;background:${SCOL[p.estado]}"></div></div></div><span style="font-size:11px;color:var(--t2);min-width:28px;text-align:right">${p.pct}%</span><button class="btn btn-sm" onclick="openEditProj(${p.id});event.stopPropagation()"><i class="ti ti-edit"></i></button><i class="ti ti-chevron-down" style="font-size:14px;color:var(--t3);transition:transform .2s" id="pc-${p.id}"></i></div>`;
+  head.innerHTML=`<div style="flex:1;min-width:120px"><div style="font-size:13px;font-weight:500;color:var(--text)">${p.nome}</div><div style="font-size:11px;color:var(--t3);margin-top:1px"><i class="ti ti-building" style="font-size:11px;margin-right:2px"></i>${p.cliente} · Responsável: ${h(getAM(p.amId).name)}${projectCollaboratorIds(p).length?' · Colab.: '+projectCollaboratorIds(p).map(id=>h(getAM(id).name)).join(', '):''} · Prazo: ${p.prazo}</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><span class="pill ${SCLS[p.estado]}">${SLBL[p.estado]}</span><div style="width:90px"><div class="pbar"><div class="pbar-f" style="width:${p.pct}%;background:${SCOL[p.estado]}"></div></div></div><span style="font-size:11px;color:var(--t2);min-width:28px;text-align:right">${p.pct}%</span><button class="btn btn-sm" onclick="openEditProj(${p.id});event.stopPropagation()" title="Editar projeto"><i class="ti ti-edit"></i></button>${canEditProject(p)?`<button class="btn btn-sm btn-d" onclick="deleteProject(${p.id});event.stopPropagation()" title="Eliminar projeto"><i class="ti ti-trash"></i></button>`:''}<i class="ti ti-chevron-down" style="font-size:14px;color:var(--t3);transition:transform .2s" id="pc-${p.id}"></i></div>`;
 
   const detail=document.createElement('div');detail.className='proj-detail';detail.id=`pd-${p.id}`;
   detail.innerHTML=`
@@ -2819,6 +2820,9 @@ function uniqueOptions(items,fn){return[...new Set(items.map(fn).filter(Boolean)
 function setMeetingFilter(key,value){MEETING_FILTERS[key]=value||'all';saveMeetingFilters();renderReunioes();}
 function meetingMatchesFilters(m){
   const f=MEETING_FILTERS;
+  const p=getP(m.projetoId)||{};
+  const q=normText(f.query&&f.query!=='all'?f.query:'');
+  const hay=normText([m.company,m.arabClient,m.maabClient,m.account,m.contact,m.contactRole,m.country,m.sector,m.meetingType,m.status,m.summary,m.nota,m.proximo,m.followupNotes,p.nome,p.cliente,projectMarkets(p).join(' '),projectArabClients(p).join(' ')].join(' '));
   return (f.account==='all'||String(m.amId)===String(f.account)||m.account===f.account)&&
     (f.client==='all'||String(m.projetoId)===String(f.client)||m.maabClient===f.client)&&
     (f.externalCompany==='all'||m.company===f.externalCompany)&&
@@ -2826,6 +2830,7 @@ function meetingMatchesFilters(m){
     (f.month==='all'||String(m.data||'').slice(0,7)===f.month)&&
     (f.status==='all'||m.status===f.status)&&
     (f.score==='all'||String(m.score||0)===String(f.score))&&
+    (!q||hay.includes(q))&&
     (f.followUpStatus==='all'||(f.followUpStatus==='pending'?meetingHasPendingFollowup(m):f.followUpStatus==='none'?!m.followUpDate:normText(m.followUpStatus)==='concluido'||normText(m.followUpStatus)==='concluida'));
 }
 function sortMeetings(list){
@@ -2853,6 +2858,7 @@ function renderMeetingFilters(all){
   setOpts('meet-fil-status',Object.entries(MST).map(([value,m])=>({value,label:m.l})),MEETING_FILTERS.status,'Todos');
   setOpts('meet-fil-score',[1,2,3,4].map(v=>({value:v,label:`${v} · ${MEETING_SCORE_LABELS[v]}`})),MEETING_FILTERS.score,'Todos');
   const month=document.getElementById('meet-fil-month');if(month)month.value=MEETING_FILTERS.month==='all'?'':MEETING_FILTERS.month;
+  const search=document.getElementById('meet-fil-search');if(search&&search.value!==(MEETING_FILTERS.query||''))search.value=MEETING_FILTERS.query||'';
   const follow=document.getElementById('meet-fil-follow');if(follow)follow.value=MEETING_FILTERS.followUpStatus;
   const sort=document.getElementById('meet-sort');if(sort)sort.value=MEETING_FILTERS.sort||'default';
 }
@@ -3193,6 +3199,26 @@ function openEditProj(id){
       if(save()){closeModal();renderView(VIEW);}
     }catch(err){console.error('Erro ao guardar projeto',err);alert('Não consegui guardar este projeto. Detalhe: '+(err?.message||err));}
   });
+}
+
+function deleteProject(id){
+  const p=getP(id);
+  if(!p)return alert('Projeto não encontrado.');
+  if(!canEditProject(p))return alert('Esta sessão não pode eliminar este projeto.');
+  const meetings=(S.reunioes||[]).filter(r=>Number(r.projetoId)===Number(id)).length;
+  const followups=(calEvents||[]).filter(ev=>Number(ev.projectId)===Number(id)).length;
+  const msg='Eliminar o projeto "'+(p.cliente||p.nome)+'"?\n\nTambém serão removidos: '+meetings+' reunião(ões), comentários, follow-ups e eventos do calendário ligados a este projeto.';
+  if(!confirm(msg))return;
+  S.projetos=S.projetos.filter(x=>Number(x.id)!==Number(id));
+  delete S.comments[id];
+  S.reunioes=(S.reunioes||[]).filter(r=>Number(r.projetoId)!==Number(id));
+  calEvents=(calEvents||[]).filter(ev=>Number(ev.projectId)!==Number(id));
+  S.followUps=(S.followUps||[]).filter(f=>Number(f.projectId)!==Number(id));
+  S.dismissedSmartAlerts=(S.dismissedSmartAlerts||[]).filter(a=>!String(a).startsWith('smart-'+id+'-'));
+  Object.keys(CHARTS).forEach(k=>{if(k.includes('-'+id)){try{CHARTS[k].destroy();}catch(e){}delete CHARTS[k];}});
+  calSave();
+  save();
+  renderView(VIEW);
 }
 
 function openAddAlert(){openModal(mS('Novo alerta',`<div class="form-row"><label class="form-lbl">Título</label><input class="form-in" id="f-title" placeholder="Descrição do alerta"></div><div class="form-row"><label class="form-lbl">Detalhe</label><textarea class="form-ta" id="f-body" placeholder="Contexto e próximos passos"></textarea></div><div class="form-row"><label class="form-lbl">Tipo</label><select class="form-sel" id="f-tipo"><option value="urg">Urgente</option><option value="warn">Aviso</option><option value="info">Informação</option><option value="ok">OK</option></select></div>`),()=>{const title=(document.getElementById('f-title').value||'').trim();if(!title)return;S.alertas.push({id:S.nextId++,tipo:document.getElementById('f-tipo').value,title,body:(document.getElementById('f-body').value||'').trim(),ownerAmId:activeAmId(),done:false});save();closeModal();renderAlertas();});}
