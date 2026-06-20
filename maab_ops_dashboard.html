@@ -3259,7 +3259,7 @@ function renderFinanceChart(projects){
   const ctx=document.getElementById('finance-chart');if(!ctx||typeof Chart==='undefined')return;
   const plan=financeMonthPlan(projects,18);
   if(CHARTS['finance-chart']){try{CHARTS['finance-chart'].destroy();}catch(e){}delete CHARTS['finance-chart'];}
-  CHARTS['finance-chart']=new Chart(ctx,{type:'bar',data:{labels:plan.map(x=>x.label),datasets:[{label:'Mensal previsto',data:plan.map(x=>x.forecast),backgroundColor:'rgba(29,158,117,.28)',borderColor:'#1D9E75',borderWidth:1},{type:'line',label:'Acumulado desde inicio',data:plan.map(x=>x.acc),borderColor:'#6B55C8',backgroundColor:'transparent',borderWidth:2.5,tension:.25,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${moneyFmt(c.raw)}`}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>Math.round(v/1000)+'k'}}}}});
+  CHARTS['finance-chart']=new Chart(ctx,{type:'bar',data:{labels:plan.map(x=>x.label),datasets:[{label:'Previsao total do mes',data:plan.map(x=>x.forecast),backgroundColor:'rgba(29,158,117,.34)',borderColor:'#1D9E75',borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${moneyFmt(c.raw)}`}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>Math.round(v/1000)+'k'}}}}});
 }
 function renderFinanceiro(){
   const root=document.getElementById('view-financeiro');if(!isAuthAdmin()||!isAdmin()){if(root)root.innerHTML='<div class="card">O Financeiro so esta disponivel no acesso total do administrador.</div>';return;}
