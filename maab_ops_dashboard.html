@@ -365,6 +365,21 @@ body[data-theme="dark"] .dash-table th,body[data-theme="dark"] .dash-pager{backg
 .cal-add-lbl{font-size:10px;color:var(--t3);margin-bottom:3px}
 .cal-in{border:1px solid var(--b2);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);background:var(--s2);outline:none}
 .cal-in:focus{border-color:var(--blue);background:var(--surface)}
+.fin-toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+.fin-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--t2);margin:8px 0 0}
+.fin-dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.fin-matrix{min-width:1180px;border-collapse:separate;border-spacing:0;width:100%}
+.fin-matrix th{position:sticky;top:0;background:var(--s2);z-index:2;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--t2);padding:8px 8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:left}
+.fin-matrix td{padding:7px 8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;vertical-align:middle;background:var(--surface)}
+.fin-matrix .fin-sticky{position:sticky;left:0;z-index:1;background:var(--surface);box-shadow:1px 0 0 var(--border)}
+.fin-matrix th.fin-sticky{z-index:3;background:var(--s2)}
+.fin-month-cell{min-width:88px;text-align:center;font-size:11px;font-weight:500;border-radius:6px;padding:5px 6px;line-height:1.2}
+.fin-cell-off{background:#fff;color:var(--t3);border:1px solid var(--border)}
+.fin-cell-plan{background:#EAF3DE;color:#27500A;border:1px solid #97C459}
+.fin-cell-due{background:#FAEEDA;color:#854F0B;border:1px solid #FAC775}
+.fin-cell-late{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595}
+.fin-cell-paid{background:#DFF5ED;color:#0F6E56;border:1px solid #6FC6A6}
+.fin-cell-note{font-size:9px;font-weight:400;margin-top:2px;opacity:.8}
 </style>
 </head>
 <body class="" data-theme="light">
@@ -3166,6 +3181,39 @@ function saveFinanceTable(){
   save();renderFinanceiro();renderAlertas();
 }
 
+function financeMonthCell(p,month){
+  const f=financeInfo(p),amount=financeMonthlyAmount(p),day=Math.max(1,Math.min(28,Number(f.invoiceDay||1)));
+  if(!financeActiveInMonth(p,month.key))return`<div class="fin-month-cell fin-cell-off">-</div>`;
+  const now=new Date(),current=financeMonthKeyFromDate(now),dueDate=new Date(month.date);dueDate.setDate(day);dueDate.setHours(0,0,0,0);
+  let cls='fin-cell-plan',title='Previsto';
+  if(month.key===current){if(f.paid){cls='fin-cell-paid';title='Pago';}else if(f.issued&&financeNeedsPaymentAlert(p)){cls='fin-cell-late';title='Atrasado';}else if(f.issued){cls='fin-cell-due';title='Emitida';}else if(now>=dueDate){cls='fin-cell-late';title='Emitir';}}
+  return`<div class="fin-month-cell ${cls}"><div>${moneyFmt(amount).replace(' EUR','')}</div><div class="fin-cell-note">dia ${day} - ${title}</div></div>`;
+}
+function financeMonthMatrix(projects,months){
+  return`<table class="fin-matrix"><thead><tr><th class="fin-sticky">Cliente</th><th>Inicio</th><th>Dia</th><th>Monthly fee</th><th>Success fee</th>${months.map(m=>`<th>${m.label}</th>`).join('')}</tr></thead><tbody>${projects.map(p=>{const f=financeInfo(p),am=getAM(p.amId);return`<tr><td class="fin-sticky"><b>${h(p.cliente||p.nome)}</b><div style="font-size:10px;color:var(--t3)">${h(am.name)} - ${SLBL[p.estado]||p.estado}</div></td><td>${h(financeProjectStartKey(p))}</td><td>${Number(f.invoiceDay||1)}</td><td><b>${moneyFmt(financeMonthlyAmount(p))}</b></td><td>${h(f.successFee||'-')}</td>${months.map(m=>`<td>${financeMonthCell(p,m)}</td>`).join('')}</tr>`;}).join('')}</tbody></table>`;
+}
+function renderFinanceChart(projects){
+  const ctx=document.getElementById('finance-chart');if(!ctx||typeof Chart==='undefined')return;
+  const plan=financeMonthPlan(projects,12);
+  if(CHARTS['finance-chart']){try{CHARTS['finance-chart'].destroy();}catch(e){}delete CHARTS['finance-chart'];}
+  CHARTS['finance-chart']=new Chart(ctx,{type:'bar',data:{labels:plan.map(x=>x.label),datasets:[{label:'Mensal previsto',data:plan.map(x=>x.forecast),backgroundColor:'rgba(29,158,117,.28)',borderColor:'#1D9E75',borderWidth:1},{type:'line',label:'Acumulado previsto',data:plan.map(x=>x.acc),borderColor:'#6B55C8',backgroundColor:'transparent',borderWidth:2.5,tension:.25,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${moneyFmt(c.raw)}`}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>Math.round(v/1000)+'k'}}}}});
+}
+function renderFinanceiro(){
+  const root=document.getElementById('view-financeiro');if(!isAuthAdmin()||!isAdmin()){if(root)root.innerHTML='<div class="card">O Financeiro so esta disponivel no acesso total do administrador.</div>';return;}
+  const projects=financeProjects(),months=financeMonthsForward(12),plan=financeMonthPlan(projects,12),current=plan[0]||{forecast:0,issued:0,paid:0,open:0,clients:0};
+  const yearly=plan.reduce((s,m)=>s+m.forecast,0),late=projects.filter(financeNeedsPaymentAlert).length,due=projects.filter(financeNeedsInvoiceAlert).length,missing=projects.filter(p=>financeMonthlyAmount(p)<=0).length;
+  document.getElementById('fin-metrics').innerHTML=`<div class="mc"><div class="mc-l">Previsto este mes</div><div class="mc-v">${moneyFmt(current.forecast)}</div><div class="mc-s">${current.clients} clientes faturaveis</div></div><div class="mc"><div class="mc-l">Projecao 12 meses</div><div class="mc-v">${moneyFmt(yearly)}</div></div><div class="mc"><div class="mc-l">Recebido este mes</div><div class="mc-v" style="color:var(--green)">${moneyFmt(current.paid)}</div></div><div class="mc"><div class="mc-l">Por emitir hoje</div><div class="mc-v" style="color:var(--amber)">${due}</div></div><div class="mc"><div class="mc-l">Atrasos pagamento</div><div class="mc-v" style="color:var(--red)">${late}</div></div><div class="mc"><div class="mc-l">Sem mensalidade</div><div class="mc-v">${missing}</div></div>`;
+  const mt=document.getElementById('finance-month-table');if(mt){const wrap=mt.parentElement;wrap.innerHTML=`<div style="padding:12px 14px;border-bottom:1px solid var(--border)"><div style="font-size:13px;font-weight:700">Mapa mensal de faturacao</div><div style="font-size:11px;color:var(--t3);margin-top:2px">Cada cliente pode ter um dia de emissao diferente. Verde = previsto/pago, amarelo = emitida por receber, vermelho = emitir ou pagamento atrasado.</div><div class="fin-legend"><span class="fin-dot" style="background:#EAF3DE;border:1px solid #97C459"></span>Previsto <span class="fin-dot" style="background:#FAEEDA;border:1px solid #FAC775"></span>Emitida <span class="fin-dot" style="background:#FCEBEB;border:1px solid #F09595"></span>Atraso/emitir <span class="fin-dot" style="background:#DFF5ED;border:1px solid #6FC6A6"></span>Pago</div></div><div style="overflow:auto">${financeMonthMatrix(projects,months)}</div><table class="tbl" id="finance-month-table" style="display:none"></table>`;}
+  const table=document.getElementById('finance-table');
+  table.innerHTML=`<thead><tr><th>Cliente</th><th>AM</th><th>Inicio</th><th>Dia emissao</th><th>Monthly fee</th><th>Success fee</th><th>Emitida este mes</th><th>Paga este mes</th><th>Data pagamento</th><th>Notas</th></tr></thead><tbody>${projects.map(p=>{const f=financeInfo(p),am=getAM(p.amId);return`<tr class="fin-row" data-pid="${p.id}"><td><b>${h(p.cliente||p.nome)}</b><div style="font-size:10px;color:var(--t3)">${h(p.nome)}</div></td><td>${h(am.name)}</td><td>${h(financeProjectStartKey(p))}</td><td><input class="form-in" data-fin="invoiceDay" type="number" min="1" max="28" value="${Number(f.invoiceDay||1)}" style="width:76px"></td><td><input class="form-in" data-fin="monthlyAmount" type="number" min="0" value="${financeMonthlyAmount(p)}" style="min-width:110px"></td><td><input class="form-in" data-fin="successFee" value="${h(f.successFee||'')}" placeholder="Ex: 5%" style="width:90px"></td><td><input data-fin="issued" type="checkbox" ${f.issued?'checked':''}></td><td><input data-fin="paid" type="checkbox" ${f.paid?'checked':''}></td><td><input class="form-in" data-fin="paidDate" type="date" value="${f.paidDate||''}" style="min-width:130px"></td><td><input class="form-in" data-fin="notes" value="${h(f.notes||'')}" placeholder="Ex: PO pendente, lembrete enviado"></td></tr>`;}).join('')}</tbody>`;
+  renderFinanceChart(projects);
+}
+function saveFinanceTable(){
+  if(!isAuthAdmin()||!isAdmin())return alert('So o administrador pode alterar o Financeiro.');
+  document.querySelectorAll('#finance-table .fin-row').forEach(row=>{const p=getP(Number(row.dataset.pid));if(!p)return;const f=financeInfo(p);row.querySelectorAll('[data-fin]').forEach(el=>{const k=el.dataset.fin;if(el.type==='checkbox')f[k]=el.checked;else if(k==='monthlyAmount'||k==='invoiceDay')f[k]=Number(el.value||0);else f[k]=el.value;});f.amount=Number(f.monthlyAmount||0);const day=Math.max(1,Math.min(28,Number(f.invoiceDay||1)));const d=new Date();d.setDate(day);f.invoiceDate=d.toISOString().slice(0,10);if(f.paid&&!f.paidDate)f.paidDate=todayISO();});
+  save();renderFinanceiro();renderAlertas();
+}
+
 function renderAlertas(){
   const el=document.getElementById('alertas-list');el.innerHTML='';
   const list=visibleAlerts();
@@ -3509,4 +3557,3 @@ setTimeout(()=>{try{const active=document.querySelector('.view.active');const da
 
 
 </body></html>
-
