@@ -2514,7 +2514,9 @@ function _exExtra(nome){if(!S.exClientesExtra)S.exClientesExtra={};return S.exCl
 function exMergedClients(){return EX_CLIENTES_DATA.map(c=>({...c,..._exExtra(c.nome)}));}
 function exClientAccountId(c){return Number(c.accountId||c.amId||0)||0;}
 function clientAccountName(id){const am=getAM(Number(id));return am&&am.name!=='-'?am.name:'Por atribuir';}
-function completedClientRows(){const rows=[];S.projetos.filter(p=>p.estado!=='concluido').forEach(p=>rows.push({nome:p.cliente||p.nome,projeto:p.nome,amId:p.amId,status:'Atual',source:'project',id:p.id,meetings:(S.reunioes||[]).filter(r=>r.projetoId===p.id).length,score:scoreAvg(p)||0}));S.projetos.filter(p=>p.estado==='concluido').forEach(p=>rows.push({nome:p.cliente||p.nome,projeto:p.nome,amId:p.amId,status:'Concluido',source:'project',id:p.id,meetings:(S.reunioes||[]).filter(r=>r.projetoId===p.id).length||p.mensal.r.reduce((a,b)=>a+b,0),score:scoreAvg(p)||0}));exMergedClients().forEach(c=>rows.push({nome:c.nome,projeto:c.sub||c.sector||'',amId:exClientAccountId(c),status:'Concluido',source:'ex',id:c.nome,meetings:Number(c.reunioes||c.meetings||0)||0,score:normalizeScore(c.sat)}));return rows;}
+function projectRelationMonths(p){const start=projectStartDate(p);let end=new Date();if(p.estado==='concluido'){end=projectLastMeetingDate(p)||(/^\d{4}-\d{2}-\d{2}$/.test(String(p.prazo||''))?new Date(p.prazo+'T00:00:00'):end);}if(isNaN(start)||isNaN(end))return Math.max(1,Number(p.monthsActive||1));let months=(end.getFullYear()-start.getFullYear())*12+(end.getMonth()-start.getMonth())+1;return Math.max(1,months);}
+function exClientMonths(c){const extra=_exExtra(c.nome);return Math.max(1,Number(extra.months||c.months||c.meses||c.mesesTrabalho||1)||1);}
+function completedClientRows(){const rows=[];S.projetos.filter(p=>p.estado!=='concluido').forEach(p=>rows.push({nome:p.cliente||p.nome,projeto:p.nome,amId:p.amId,status:'Atual',source:'project',id:p.id,months:projectRelationMonths(p),meetings:(S.reunioes||[]).filter(r=>r.projetoId===p.id).length,score:scoreAvg(p)||0}));S.projetos.filter(p=>p.estado==='concluido').forEach(p=>rows.push({nome:p.cliente||p.nome,projeto:p.nome,amId:p.amId,status:'Concluido',source:'project',id:p.id,months:projectRelationMonths(p),meetings:(S.reunioes||[]).filter(r=>r.projetoId===p.id).length||p.mensal.r.reduce((a,b)=>a+b,0),score:scoreAvg(p)||0}));exMergedClients().forEach(c=>rows.push({nome:c.nome,projeto:c.sub||c.sector||'',amId:exClientAccountId(c),status:'Concluido',source:'ex',id:c.nome,months:exClientMonths(c),meetings:Number(c.reunioes||c.meetings||0)||0,score:normalizeScore(c.sat)}));return rows;}
 function doneAccountOptions(selected=''){return'<option value="">Todos os AMs</option><option value="0"'+(String(selected)==='0'?' selected':'')+'>Por atribuir</option>'+S.ams.map(a=>`<option value="${a.id}"${String(selected)===String(a.id)?' selected':''}>${h(a.name)}</option>`).join('');}
 function openExClientCard(nome){
   const base=EX_CLIENTES_DATA.find(c=>c.nome===nome);if(!base)return;
@@ -2658,6 +2660,15 @@ function renderConcluidos(){
   const combinedRows=completedClientRows().filter(r=>filterAm===''||String(r.amId||0)===String(filterAm));
   const byAm={};completedClientRows().forEach(r=>{const id=String(r.amId||0);if(!byAm[id])byAm[id]={name:clientAccountName(id),atuais:0,concluidos:0,total:0};if(r.status==='Atual')byAm[id].atuais++;else byAm[id].concluidos++;byAm[id].total++;});
   const accSummary=Object.values(byAm).sort((a,b)=>b.total-a.total).slice(0,10);
+  const durationRows=combinedRows.slice().sort((a,b)=>(b.months||0)-(a.months||0)||a.nome.localeCompare(b.nome,'pt')).slice(0,18);
+  document.getElementById('done-stats').insertAdjacentHTML('beforeend',`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+        <div><div style="font-size:13px;font-weight:700">Meses trabalhados por cliente</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${filterAm?`Account selecionado: ${h(clientAccountName(filterAm))}`:'Seleciona um Account no filtro para ver so os clientes desse AM.'} Verde = cliente atual. Vermelho = cliente concluido.</div></div>
+        <span class="pill p-gray">${durationRows.length} cliente${durationRows.length!==1?'s':''}</span>
+      </div>
+      <div style="height:${Math.max(230,durationRows.length*28)}px"><canvas id="done-client-months-chart"></canvas></div>
+    </div>`);
   document.getElementById('done-stats').insertAdjacentHTML('beforeend',`
     <div style="display:grid;grid-template-columns:minmax(280px,520px) 1fr;gap:12px;margin-bottom:14px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px">
@@ -2682,7 +2693,10 @@ function renderConcluidos(){
     </div>`);
   if(CHARTS['done-account']){CHARTS['done-account'].destroy();delete CHARTS['done-account'];}
   const accCtx=document.getElementById('done-account-chart');
-  if(accCtx){CHARTS['done-account']=new Chart(accCtx,{type:'bar',data:{labels:accSummary.map(x=>x.name),datasets:[{label:'Atuais',data:accSummary.map(x=>x.atuais),backgroundColor:'#60A5FA'},{label:'Concluidos',data:accSummary.map(x=>x.concluidos),backgroundColor:'#22C55E'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{ticks:{font:{size:10},maxRotation:0,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});}
+  if(accCtx){CHARTS['done-account']=new Chart(accCtx,{type:'bar',data:{labels:accSummary.map(x=>x.name),datasets:[{label:'Atuais',data:accSummary.map(x=>x.atuais),backgroundColor:'#70AD47'},{label:'Concluidos',data:accSummary.map(x=>x.concluidos),backgroundColor:'#FF0000'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{ticks:{font:{size:10},maxRotation:0,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});}
+  if(CHARTS['done-client-months']){CHARTS['done-client-months'].destroy();delete CHARTS['done-client-months'];}
+  const monthsCtx=document.getElementById('done-client-months-chart');
+  if(monthsCtx){CHARTS['done-client-months']=new Chart(monthsCtx,{type:'bar',data:{labels:durationRows.map(r=>r.nome),datasets:[{label:'Soma de meses',data:durationRows.map(r=>r.months||1),backgroundColor:durationRows.map(r=>r.status==='Atual'?'#70AD47':'#FF0000'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const r=durationRows[ctx.dataIndex];return`${r.status} - ${ctx.raw} mes${ctx.raw!==1?'es':''} - ${clientAccountName(r.amId)}`;}}}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{font:{size:11}}}}}});}
   // Pagination
   const PAGE_SIZE=15;
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
@@ -3561,9 +3575,10 @@ function calLoadEvents(){
 function calSave(){try{localStorage.setItem(CAL_STORE,JSON.stringify(calEvents));}catch(e){}}
 function calMoveWeek(dir){calBaseMonday=new Date(calBaseMonday.getTime()+dir*7*86400000);renderCalendario();}
 function calGoToday(){calBaseMonday=calGetMonday(new Date());renderCalendario();}
-function calSetDateInput(){const el=document.getElementById('cal-ev-date');if(el&&!el.value)el.value=new Date().toISOString().slice(0,10);}
+function localDateInputValue(d=new Date()){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function calSetDateInput(){const el=document.getElementById('cal-ev-date');if(el&&!el.value)el.value=localDateInputValue(new Date());}
 function calTimeFromClick(y){const total=Math.max(0,Math.min(CAL_SLOT*CAL_HOURS.length-1,y));const minutes=Math.round((total/CAL_SLOT)*60);const hour=CAL_HOURS[0]+Math.floor(minutes/60);const min=minutes%60;return`${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;}
-function calPickSlot(e,dayDate){if(e.target.closest('.cal-event'))return;const rect=e.currentTarget.getBoundingClientRect();const time=calTimeFromClick(e.clientY-rect.top);const dateEl=document.getElementById('cal-ev-date'),timeEl=document.getElementById('cal-ev-hour'),titleEl=document.getElementById('cal-ev-title');if(dateEl)dateEl.value=dayDate.toISOString().slice(0,10);if(timeEl)timeEl.value=time;if(titleEl&&!titleEl.value.trim())titleEl.focus();const msg=document.getElementById('cmd-status');if(msg)msg.textContent=`Horario selecionado: ${time} em ${dayDate.toLocaleDateString('pt-PT',{day:'2-digit',month:'short'})}`;}
+function calPickSlot(e,dayDate){if(e.target.closest('.cal-event'))return;const rect=e.currentTarget.getBoundingClientRect();const time=calTimeFromClick(e.clientY-rect.top);const dateEl=document.getElementById('cal-ev-date'),timeEl=document.getElementById('cal-ev-hour'),titleEl=document.getElementById('cal-ev-title');if(dateEl)dateEl.value=localDateInputValue(dayDate);if(timeEl)timeEl.value=time;if(titleEl&&!titleEl.value.trim())titleEl.focus();const msg=document.getElementById('cmd-status');if(msg)msg.textContent=`Horario selecionado: ${time} em ${dayDate.toLocaleDateString('pt-PT',{day:'2-digit',month:'short'})}`;}
 
 function calWeekDays(){const days=[];for(let i=0;i<5;i++){const d=new Date(calBaseMonday);d.setDate(d.getDate()+i);days.push(d);}return days;}
 function calMeetingEvents(){return(S.reunioes||[]).filter(r=>{const p=getP(r.projetoId);return isAuthAdmin()||Number(r.amId)===Number(activeAmId())||isProjectParticipant(p,activeAmId());}).map(r=>{const p=getP(r.projetoId)||{};const d=new Date((r.data||new Date().toISOString().slice(0,10))+'T'+(r.hora||'09:00'));return{id:'meet-'+r.id,title:r.titulo||('Follow-up '+(p.cliente||'')),type:r.status==='followup'?'tarefa':'reuniao',ts:d.getTime(),dur:60,generated:true,ownerAmId:r.amId,projectId:r.projetoId};});}
@@ -3716,3 +3731,4 @@ setTimeout(()=>{try{const active=document.querySelector('.view.active');const da
 
 
 </body></html>
+
